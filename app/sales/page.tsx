@@ -516,10 +516,9 @@ export default function SalesPage() {
                         (c) => c.id.toString() === selectedCustomer
                       )?.creditLimit ||
                       0 -
-                        sampleCustomers.find(
+                        (sampleCustomers.find(
                           (c) => c.id.toString() === selectedCustomer
-                        )?.currentBalance ||
-                      0
+                        )?.currentBalance || 0)
                     ).toLocaleString()}
                   </AlertDescription>
                 </Alert>
