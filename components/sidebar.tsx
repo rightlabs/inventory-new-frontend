@@ -5,24 +5,19 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Package2,
   ShoppingCart,
-  ClipboardList,
-  Users,
-  BarChart3,
-  Settings,
-  LogOut,
   IndianRupee,
   Building2,
   Store,
   Warehouse,
 } from "lucide-react";
+import LogoutButton from "./logout-button";
 
 const routes = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
   },
   {
     label: "Purchases",
@@ -49,11 +44,11 @@ const routes = [
     icon: Warehouse, // Changed to better represent inventory storage
     href: "/inventory",
   },
-  {
-    label: "Analytics",
-    icon: BarChart3,
-    href: "/analytics",
-  },
+  // {
+  //   label: "Analytics",
+  //   icon: BarChart3,
+  //   href: "/analytics",
+  // },
 ];
 
 export function Sidebar() {
@@ -88,13 +83,7 @@ export function Sidebar() {
       </div>
       {/* Logout section at bottom */}
       <div className="border-t border-gray-200 p-3">
-        <Link
-          href="/logout"
-          className="flex items-center gap-x-2 text-[#64748B] text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#F1F5F9] transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </Link>
+        <LogoutButton />
       </div>
     </div>
   );

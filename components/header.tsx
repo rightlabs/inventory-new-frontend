@@ -1,6 +1,5 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -12,8 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import Link from "next/link";
+import { useUser } from "@/contexts/userContext";
 
 export function Header() {
+  const { user } = useUser();
+
   return (
     <header className="border-b bg-white">
       <div className="flex h-16 items-center px-6">
@@ -24,7 +26,7 @@ export function Header() {
                 <Avatar className="h-10 w-10">
                   <AvatarImage src="/avatars/01.png" alt="User" />
                   <AvatarFallback className="hover:text-text text-lg">
-                    GI
+                    {user?.firstName[0] + user?.lastName[0]}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -32,9 +34,11 @@ export function Header() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin</p>
+                  <p className="text-sm font-medium leading-none capitalize">
+                    {user?.role}
+                  </p>
                   <p className="text-xs leading-none text-gray-500">
-                    admin@gayatri-industries.com
+                    {user?.email}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -43,9 +47,6 @@ export function Header() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
-                Log out
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
