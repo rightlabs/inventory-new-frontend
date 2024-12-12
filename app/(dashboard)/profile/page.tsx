@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Camera,
 } from "lucide-react";
+import { useUser } from "@/contexts/userContext";
 
 interface UserProfile {
   name: string;
@@ -43,6 +44,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const { user } = useUser();
 
   const profile: UserProfile = {
     name: "Rajesh Kumar",
@@ -68,8 +70,8 @@ export default function ProfilePage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Basic Info</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          {/* <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger> */}
         </TabsList>
 
         {/* Basic Info Tab */}
@@ -97,10 +99,14 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24">
                   <AvatarImage src="" />
                   <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {profile.name
+                    {user?.firstName
                       .split(" ")
                       .map((n) => n[0])
-                      .join("")}
+                      .join("") +
+                      user?.lastName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
@@ -117,7 +123,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Full Name</label>
                     <Input
-                      defaultValue={profile.name}
+                      defaultValue={user?.firstName}
                       readOnly={!isEditing}
                       className={!isEditing ? "bg-muted" : ""}
                     />
@@ -126,23 +132,16 @@ export default function ProfilePage() {
                     <label className="text-sm font-medium">Email</label>
                     <Input
                       type="email"
-                      defaultValue={profile.email}
+                      defaultValue={user?.email}
                       readOnly={!isEditing}
                       className={!isEditing ? "bg-muted" : ""}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Phone</label>
-                    <Input
-                      defaultValue={profile.phone}
-                      readOnly={!isEditing}
-                      className={!isEditing ? "bg-muted" : ""}
-                    />
-                  </div>
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Role</label>
                     {isEditing ? (
-                      <Select defaultValue={profile.role}>
+                      <Select defaultValue={profile?.role}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
@@ -154,27 +153,26 @@ export default function ProfilePage() {
                       </Select>
                     ) : (
                       <Input
-                        defaultValue={profile.role}
+                        defaultValue={user?.role}
                         readOnly
-                        className="bg-muted"
+                        className="bg-muted capitalize"
                       />
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Company</label>
-                  <Input
-                    defaultValue={profile.company}
-                    readOnly={!isEditing}
-                    className={!isEditing ? "bg-muted" : ""}
-                  />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Company</label>
+                    <Input
+                      defaultValue={profile?.company}
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-muted" : ""}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Address</label>
                   <Input
-                    defaultValue={profile.address}
+                    defaultValue={profile?.address}
                     readOnly={!isEditing}
                     className={!isEditing ? "bg-muted" : ""}
                   />
