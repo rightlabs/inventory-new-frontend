@@ -1,82 +1,106 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Download, FileSpreadsheet, Plus } from "lucide-react";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Download, Plus } from "lucide-react";
+import { getVendors } from "@/api/vendor";
+import { getPurchases } from "@/api/purchase";
+import toast from "react-hot-toast";
+import PurchaseModal from "@/components/Forms/PurchaseForm";
+import { format } from "date-fns";
+import PaymentModal from "@/components/Forms/PaymentModal";
 
-interface Party {
-  id: number;
+interface Vendor {
+  id: string;
   name: string;
-  gstin?: string;
+  gstin: string;
+  _id: string;
 }
 
 interface Purchase {
-  id: string;
+  _id: string;
+  purchaseNumber: string;
   date: string;
   invoiceNo: string;
-  vendorName: string;
-  amount: number;
-  gst: number;
+  vendor: {
+    _id: string;
+    name: string;
+    gstin: string;
+  };
+  totalAmount: number;
+  discount: number;
+  gstAmount: number;
+  grandTotal: number;
+  balanceAmount: number;
   status: "pending" | "received";
   paymentStatus: "unpaid" | "partial" | "paid";
 }
 
-export default function PurchasesPage() {
-  const [open, setOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+}
 
-  // Sample data
-  const parties: Party[] = [
-    { id: 1, name: "Ashutosh Ji", gstin: "09AAACH7409R1ZZ" },
-    { id: 2, name: "Vendor 2", gstin: "07BBBCH8809R1ZZ" },
-  ];
+export default function PurchasePage() {
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+  });
 
-  const purchases: Purchase[] = [
-    {
-      id: "PO-2024-001",
-      date: "2024-03-20",
-      invoiceNo: "INV-001",
-      vendorName: "Ashutosh Ji",
-      amount: 235000,
-      gst: 42300,
-      status: "received",
-      paymentStatus: "paid",
-    },
-    {
-      id: "PO-2024-002",
-      date: "2024-03-19",
-      invoiceNo: "INV-002",
-      vendorName: "Vendor 2",
-      amount: 185000,
-      gst: 33300,
-      status: "pending",
-      paymentStatus: "unpaid",
-    },
-  ];
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
+    null
+  );
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+  const fetchVendors = async () => {
+    try {
+      const response = await getVendors();
+
+      if (response?.data?.statusCode === 200) {
+        const transformedVendors = response.data.data.map((vendor: any) => ({
+          _id: vendor._id,
+          id: vendor.id,
+          name: vendor.name,
+          gstin: vendor.gstin,
+        }));
+
+        setVendors(transformedVendors);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch vendors");
+      console.error("Error fetching vendors:", error);
     }
   };
+
+  const fetchPurchases = async (page = 1) => {
+    try {
+      setIsLoading(true);
+      const response = await getPurchases({ page, limit: 10 });
+
+      if (response?.data?.statusCode === 200) {
+        setPurchases(response.data.data.purchases);
+        setPagination(response.data.data.pagination);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch purchases");
+      console.error("Error fetching purchases:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVendors();
+    fetchPurchases();
+  }, []);
 
   // Status badge component
   const StatusBadge = ({ status }: { status: Purchase["status"] }) => {
@@ -111,6 +135,15 @@ export default function PurchasesPage() {
     );
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -121,187 +154,34 @@ export default function PurchasesPage() {
             Manage your purchase orders and transactions
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={purchaseOpen} onOpenChange={setPurchaseOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary">
               <Plus className="mr-2 h-4 w-4" /> Add Purchase
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Purchase</DialogTitle>
-              <DialogDescription>
-                Upload purchase details and enter additional information
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-6 py-4">
-              {/* Purchase Details Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Vendor Selection with Add Button */}
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium mb-1 block">
-                      Vendor Name*
-                    </label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vendor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {parties.map((party) => (
-                          <SelectItem
-                            key={party.id}
-                            value={party.id.toString()}
-                          >
-                            {party.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button className="mt-6" variant="outline" size="icon">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Purchase Date */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Purchase Date*
-                  </label>
-                  <Input type="date" />
-                </div>
-
-                {/* E-way Bill Number */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    E-way Bill No.*
-                  </label>
-                  <Input placeholder="Enter e-way bill number" />
-                </div>
-
-                {/* Invoice Number */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Invoice No*
-                  </label>
-                  <Input placeholder="Enter invoice number" />
-                </div>
-
-                {/* Terms of Payment */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Terms of Payment
-                  </label>
-                  <Input placeholder="Enter payment terms" />
-                </div>
-
-                {/* Destination */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Destination*
-                  </label>
-                  <Input placeholder="Enter destination" />
-                </div>
-
-                {/* Vehicle Number */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Vehicle No
-                  </label>
-                  <Input placeholder="Enter vehicle number" />
-                </div>
-              </div>
-
-              {/* File Upload Section */}
-              <div>
-                <label className="text-sm font-medium block mb-2">
-                  Purchase List
-                </label>
-                <Card className="mt-0">
-                  <CardContent className="pt-3 p-3">
-                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center">
-                      <input
-                        type="file"
-                        id="file-upload"
-                        className="hidden"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={handleFileSelect}
-                      />
-                      <label
-                        htmlFor="file-upload"
-                        className="cursor-pointer flex flex-col items-center"
-                      >
-                        <FileSpreadsheet className="h-12 w-12 text-gray-400 mb-4" />
-                        <span className="text-sm font-medium mb-2">
-                          {selectedFile
-                            ? selectedFile.name
-                            : "Upload Purchase Excel"}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Drag and drop or click to select
-                        </span>
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Tax and Discount Section */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Extra Discount (%)
-                  </label>
-                  <Input type="number" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Tax (%)
-                  </label>
-                  <Input type="number" placeholder="0.00" />
-                </div>
-              </div>
-
-              {/* Summary Section */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Taxable Amount</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Discount Amount</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">CGST</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">SGST</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">IGST</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between font-medium pt-2 border-t">
-                  <span>Grand Total</span>
-                  <span>₹0.00</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button>Submit</Button>
-            </div>
-          </DialogContent>
+          <PurchaseModal
+            open={purchaseOpen}
+            onOpenChange={setPurchaseOpen}
+            vendors={vendors}
+            isLoading={isLoading}
+            onSuccess={() => fetchPurchases(pagination.currentPage)}
+            fetchVendors={fetchVendors}
+          />
         </Dialog>
+        {selectedPurchase && (
+          <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+            <PaymentModal
+              open={paymentModalOpen}
+              onOpenChange={setPaymentModalOpen}
+              purchase={selectedPurchase}
+              onSuccess={() => {
+                fetchPurchases(pagination.currentPage);
+                setSelectedPurchase(null);
+              }}
+            />
+          </Dialog>
+        )}
       </div>
 
       {/* Purchase Orders Section */}
@@ -342,7 +222,7 @@ export default function PurchasesPage() {
                     Amount
                   </th>
                   <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    GST
+                    Balance
                   </th>
                   <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                     Status
@@ -350,37 +230,98 @@ export default function PurchasesPage() {
                   <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                     Payment
                   </th>
+                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {purchases.map((purchase) => (
-                  <tr
-                    key={purchase.id}
-                    className="border-b transition-colors hover:bg-muted/50"
-                  >
-                    <td className="p-4 align-middle">{purchase.date}</td>
-                    <td className="p-4 align-middle font-medium">
-                      {purchase.id}
-                    </td>
-                    <td className="p-4 align-middle">{purchase.invoiceNo}</td>
-                    <td className="p-4 align-middle">{purchase.vendorName}</td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{purchase.amount.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{purchase.gst.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <StatusBadge status={purchase.status} />
-                    </td>
-                    <td className="p-4 align-middle">
-                      <PaymentBadge status={purchase.paymentStatus} />
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="p-4 text-center">
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                ) : purchases.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-4 text-center">
+                      No purchases found
+                    </td>
+                  </tr>
+                ) : (
+                  purchases.map((purchase) => (
+                    <tr
+                      key={purchase._id}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <td className="p-4 align-middle">
+                        {format(new Date(purchase.date), "dd/MM/yyyy")}
+                      </td>
+                      <td className="p-4 align-middle font-medium">
+                        {purchase.purchaseNumber}
+                      </td>
+                      <td className="p-4 align-middle">{purchase.invoiceNo}</td>
+                      <td className="p-4 align-middle">
+                        {purchase.vendor.name}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        {formatCurrency(purchase.grandTotal)}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        {formatCurrency(purchase.balanceAmount)}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <StatusBadge status={purchase.status} />
+                      </td>
+                      <td className="p-4 align-middle">
+                        <PaymentBadge status={purchase.paymentStatus} />
+                      </td>
+                      <td className="p-4 align-middle">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPurchase(purchase);
+                            setPaymentModalOpen(true);
+                          }}
+                          disabled={purchase.paymentStatus === "paid"}
+                        >
+                          Add Payment
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing page {pagination.currentPage} of {pagination.totalPages}
+              </p>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.currentPage === 1}
+                  onClick={() => fetchPurchases(pagination.currentPage - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  onClick={() => fetchPurchases(pagination.currentPage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

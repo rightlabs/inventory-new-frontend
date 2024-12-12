@@ -1,4 +1,4 @@
-import API_INSTANCE from ".";
+import API_INSTANCE from "./index";
 
 export const userLogin = async (data: object) => {
   const res = await API_INSTANCE.post("/user/login", data);

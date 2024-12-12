@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Download, Plus, ScrollText } from "lucide-react";
+import { getVendors } from "@/api/vendor";
+import VendorForm from "@/components/Forms/VendorForm";
 import {
   Dialog,
   DialogContent,
@@ -11,26 +15,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Download,
-  Plus,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  AlertCircle,
-} from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
+import { getVendorLedger } from "@/api/transaction";
+import { LedgerModal, TransactionData } from "@/components/Forms/LedgerModal";
 interface Vendor {
+  _id: string;
   id: string;
   name: string;
   gstin: string;
@@ -45,37 +33,76 @@ interface Vendor {
 }
 
 export default function VendorsPage() {
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
-  // Sample vendors data
-  const vendors: Vendor[] = [
-    {
-      id: "V001",
-      name: "Ashutosh Ji",
-      gstin: "09AAACH7409R1ZZ",
-      contactPerson: "Ashutosh Kumar",
-      phone: "+91 9876543210",
-      email: "ashutosh@example.com",
-      address: "123, Street Name, City, State - 123456",
-      creditLimit: 500000,
-      currentBalance: 125000,
-      status: "active",
-      paymentTerms: "Net 30",
-    },
-    {
-      id: "V002",
-      name: "Vendor 2",
-      gstin: "07BBBCH8809R1ZZ",
-      contactPerson: "John Doe",
-      phone: "+91 9876543211",
-      email: "john@example.com",
-      address: "456, Street Name, City, State - 123456",
-      creditLimit: 300000,
-      currentBalance: 75000,
-      status: "active",
-      paymentTerms: "Net 15",
-    },
-  ];
+  const [showLedger, setShowLedger] = useState(false);
+  const [transactions, setTransactions] = useState<TransactionData[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+
+  const fetchVendors = async () => {
+    try {
+      const response = await getVendors();
+
+      if (response?.data?.statusCode === 200) {
+        // Transform the data to match our interface
+        const transformedVendors = response.data.data.map((vendor: any) => ({
+          _id: vendor._id,
+          id: vendor.id,
+          name: vendor.name,
+          gstin: vendor.gstin,
+          contactPerson: vendor.contactPerson,
+          phone: vendor.phone,
+          email: vendor.email,
+          address: vendor.address,
+          creditLimit: vendor.creditLimit,
+          currentBalance: vendor.currentBalance,
+          status: vendor.status,
+        }));
+
+        setVendors(transformedVendors);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch vendors");
+      console.error("Error fetching vendors:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewLedger = async (vendorId: string) => {
+    try {
+      setSelectedVendor(vendorId);
+      const response = await getVendorLedger(vendorId);
+      if (response?.data.success) {
+        setTransactions(response.data.data);
+        setShowLedger(true);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch ledger");
+    }
+  };
+
+  const handleDateSelect = async (date: Date) => {
+    if (selectedVendor) {
+      try {
+        const response = await getVendorLedger(selectedVendor, {
+          startDate: date.toISOString(),
+          endDate: date.toISOString(),
+        });
+        if (response?.data.success) {
+          setTransactions(response.data.data);
+        }
+      } catch (error) {
+        toast.error("Failed to fetch transactions for selected date");
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
 
   const StatusBadge = ({ status }: { status: Vendor["status"] }) => {
     const styles = {
@@ -94,7 +121,6 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
@@ -115,105 +141,13 @@ export default function VendorsPage() {
                 Enter vendor details and business information
               </DialogDescription>
             </DialogHeader>
-
-            <div className="grid gap-6 py-4">
-              {/* Basic Information */}
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Business Name*
-                  </label>
-                  <Input placeholder="Enter business name" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      GSTIN*
-                    </label>
-                    <Input placeholder="Enter GSTIN" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Payment Terms
-                    </label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select terms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="immediate">Immediate</SelectItem>
-                        <SelectItem value="net15">Net 15</SelectItem>
-                        <SelectItem value="net30">Net 30</SelectItem>
-                        <SelectItem value="net45">Net 45</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Contact Person*
-                    </label>
-                    <Input placeholder="Enter contact person name" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Phone Number*
-                    </label>
-                    <Input placeholder="Enter phone number" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Email Address
-                  </label>
-                  <Input type="email" placeholder="Enter email address" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Business Address*
-                  </label>
-                  <Input placeholder="Enter complete address" />
-                </div>
-              </div>
-
-              {/* Financial Information */}
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Credit Limit
-                    </label>
-                    <Input type="number" placeholder="Enter credit limit" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Opening Balance
-                    </label>
-                    <Input type="number" placeholder="Enter opening balance" />
-                  </div>
-                </div>
-              </div>
-
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Make sure to verify the GSTIN number before adding the vendor.
-                </AlertDescription>
-              </Alert>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button>Add Vendor</Button>
-            </div>
+            <VendorForm
+              onSuccess={() => {
+                setOpen(false);
+                fetchVendors();
+              }}
+              onCancel={() => setOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -236,65 +170,98 @@ export default function VendorsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Business Name
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Contact Person
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Phone
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    GSTIN
-                  </th>
-                  <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    Credit Limit
-                  </th>
-                  <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    Balance
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendors.map((vendor) => (
-                  <tr
-                    key={vendor.id}
-                    className="border-b transition-colors hover:bg-muted/50"
-                  >
-                    <td className="p-4 align-middle font-medium">
-                      {vendor.id}
-                    </td>
-                    <td className="p-4 align-middle">{vendor.name}</td>
-                    <td className="p-4 align-middle">{vendor.contactPerson}</td>
-                    <td className="p-4 align-middle">{vendor.phone}</td>
-                    <td className="p-4 align-middle">{vendor.gstin}</td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{vendor.creditLimit.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{vendor.currentBalance.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <StatusBadge status={vendor.status} />
-                    </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <p>Loading vendors...</p>
+            </div>
+          ) : vendors.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">No vendors found</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      ID
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Business Name
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Contact Person
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Phone
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      GSTIN
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Credit Limit
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Balance
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Ledger
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {vendors.map((vendor) => (
+                    <tr
+                      key={vendor.id}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <td className="p-4 align-middle font-medium">
+                        {vendor.id}
+                      </td>
+                      <td className="p-4 align-middle">{vendor.name}</td>
+                      <td className="p-4 align-middle">
+                        {vendor.contactPerson}
+                      </td>
+                      <td className="p-4 align-middle">{vendor.phone}</td>
+                      <td className="p-4 align-middle">{vendor.gstin}</td>
+                      <td className="p-4 align-middle text-right">
+                        ₹{vendor.creditLimit.toLocaleString()}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        ₹{vendor.currentBalance.toLocaleString()}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <StatusBadge status={vendor.status} />
+                      </td>
+                      <td className="p-4 align-middle">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleViewLedger(vendor?._id)}
+                        >
+                          <ScrollText className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
+      {showLedger && (
+        <LedgerModal
+          transactions={transactions}
+          open={showLedger}
+          onClose={() => setShowLedger(false)}
+          onDateSelect={handleDateSelect}
+        />
+      )}
     </div>
   );
 }
