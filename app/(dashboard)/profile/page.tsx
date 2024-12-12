@@ -22,7 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  User,
   Mail,
   Phone,
   Building,
@@ -32,6 +31,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useUser } from "@/contexts/userContext";
+import { User } from "@/types/type";
 
 interface UserProfile {
   name: string;
@@ -44,7 +44,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
-  const { user } = useUser();
+  const { user } = useUser() as { user: User | undefined };
 
   const profile: UserProfile = {
     name: "Rajesh Kumar",
@@ -99,14 +99,7 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24">
                   <AvatarImage src="" />
                   <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {user?.firstName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("") +
-                      user?.lastName
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                    {(user?.firstName?.[0] || "") + (user?.lastName?.[0] || "")}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
