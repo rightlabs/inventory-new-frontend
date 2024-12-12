@@ -448,7 +448,14 @@ const PurchaseModal = ({
         balanceAmount: calculations.balance,
       };
 
-      const response = await createPurchase(purchaseData);
+      const response = await createPurchase({
+        ...purchaseData,
+        freight: formData.freight,
+        tcs: formData.tcs,
+        amountPaid: formData.amountPaid,
+        paymentMode: formData.paymentMode,
+        paymentReference: formData.paymentReference,
+      });
 
       if (response?.data.statusCode === 201) {
         toast.success("Purchase created successfully");

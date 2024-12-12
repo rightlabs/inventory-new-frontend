@@ -26,7 +26,8 @@ export function Header() {
                 <Avatar className="h-10 w-10">
                   <AvatarImage src="/avatars/01.png" alt="User" />
                   <AvatarFallback className="hover:text-text text-lg">
-                    {user?.firstName[0] + user?.lastName[0]}
+                    {user?.firstName?.[0] || ""}
+                    {user?.lastName?.[0] || ""}
                   </AvatarFallback>
                 </Avatar>
               </Button>
