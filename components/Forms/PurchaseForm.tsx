@@ -46,7 +46,7 @@ interface Vendor {
 // Update the form data interface
 export interface PurchaseFormData {
   vendorId: string;
-  date: string;
+  date: Date;
   ewayBillNo: string;
   invoiceNo: string;
   paymentTerms: string;
@@ -165,11 +165,11 @@ const PurchaseModal = ({
 
   const [showLedger, setShowLedger] = useState(false);
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
-  const [date, setDate] = React.useState<Date>();
+  // const [date, setDate] = React.useState<Date>();
 
   const [formData, setFormData] = useState<PurchaseFormData>({
     vendorId: "",
-    date: "",
+    date: new Date(),
     ewayBillNo: "",
     invoiceNo: "",
     paymentTerms: "",
@@ -473,7 +473,7 @@ const PurchaseModal = ({
   const resetForm = () => {
     setFormData({
       vendorId: "",
-      date: "",
+      date: new Date(),
       ewayBillNo: "",
       invoiceNo: "",
       paymentTerms: "",
@@ -657,13 +657,13 @@ const PurchaseModal = ({
               Purchase Date*
             </label>
             <DatePicker
-              date={date}
+              date={formData?.date}
               onDateChange={(newDate) => {
-                setDate(newDate);
+                // setDate(newDate);
                 if (newDate) {
                   setFormData((prev) => ({
                     ...prev,
-                    date: dateFormat(newDate, "yyyy-MM-dd"), // Using date-fns format
+                    date: newDate,
                   }));
                 }
               }}
