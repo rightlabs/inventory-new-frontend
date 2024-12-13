@@ -71,10 +71,12 @@ const DatePicker = ({ date, onDateChange }: DatePickerProps) => {
               "aria-selected:bg-accent aria-selected:text-accent-foreground",
             day_hidden: "invisible",
           }}
-          components={{
-            IconLeft: () => <ChevronLeftIcon className="h-4 w-4" />,
-            IconRight: () => <ChevronRightIcon className="h-4 w-4" />,
-          }}
+          components={
+            {
+              // IconLeft: () => <ChevronLeftIcon className="h-4 w-4" />,
+              // IconRight: () => <ChevronRightIcon className="h-4 w-4" />,
+            }
+          }
         />
       </PopoverContent>
     </Popover>

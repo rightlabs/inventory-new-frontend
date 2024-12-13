@@ -1,28 +1,37 @@
 "use client";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { getCurrentUser } from "@/api/auth";
 import { getToken } from "@/utils/getToken";
-import { createContext, useContext, useEffect, useState } from "react";
+import { User } from "@/types/type";
 
-export const UserContext = createContext({});
-
-interface User {
-  data: {
-    name: string;
-    email: string;
-  };
+interface UserContextType {
+  user: User | undefined;
 }
 
-export const UserContextProvider = ({ children }: any) => {
-  const [user, setUser] = useState<User["data"] | undefined>();
+export const UserContext = createContext<UserContextType>({ user: undefined });
+
+interface UserContextProviderProps {
+  children: ReactNode;
+}
+
+export const UserContextProvider = ({ children }: UserContextProviderProps) => {
+  const [user, setUser] = useState<User | undefined>();
   const token = getToken();
 
   const fetchCurrentUser = async () => {
     try {
-      const response: User | undefined = await getCurrentUser();
-      if (!response) return;
-      setUser(response.data.data);
+      const response = await getCurrentUser();
+      if (response?.data?.statusCode === 200) {
+        setUser(response.data.data);
+      }
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching user:", error);
     }
   };
 

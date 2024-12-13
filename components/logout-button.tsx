@@ -25,7 +25,7 @@ export default function LogoutButton() {
     try {
       const res = await userLogout();
 
-      if (res.data.statusCode == 200 || res.data.statusCode == 201) {
+      if (res?.data.statusCode == 200 || res?.data.statusCode == 201) {
         Cookies.remove("authToken");
         toast.success("Logout successful");
         router.push("/");
