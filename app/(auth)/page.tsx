@@ -30,8 +30,8 @@ export default function LoginPage() {
       const res = await userLogin({ email, password });
       if (res.data.statusCode == 200 || res.data.statusCode == 201) {
         Cookies.set("authToken", res.data.data.accessToken);
-        window.location.href = "/dashboard";
         toast.success("Login successful");
+        window.location.href = "/dashboard";
       }
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
