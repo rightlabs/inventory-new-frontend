@@ -32,7 +32,7 @@ import * as XLSX from "xlsx";
 import { createPurchase } from "@/api/purchase";
 import { LedgerModal, TransactionData } from "./LedgerModal";
 import { getVendorLedger } from "@/api/transaction";
-import { format as dateFormat } from "date-fns";
+// import { format as dateFormat } from "date-fns";
 import DatePicker from "../ui/DatePicker";
 import SummaryPurchase from "../Purchase/SummaryPurchase";
 
@@ -62,6 +62,7 @@ export interface PurchaseFormData {
 
 interface ProcessedItem {
   name: string;
+  grade?: string;
   pieces?: number;
   weight?: number;
   size?: string;
@@ -75,6 +76,8 @@ interface ProcessedItem {
   rawData: any;
   type?: string;
   subCategory?: string;
+  fittingType?: string;
+  specification?: string;
 }
 
 interface ProcessedFileData {
@@ -276,10 +279,12 @@ const PurchaseModal = ({
         const rows = XLSX.utils.sheet_to_json(worksheet);
         const processedItems = rows.map((row: any): ProcessedItem => {
           const name = formatItemName(row, itemType);
+          const grade = row["Grade"];
           const pieces = Number(row["Pieces"]) || undefined;
           const weight = Number(row["Weight"]) || undefined;
           const rate = Number(row["Rate"]) || 0;
           const gst = Number(row["GST"]) || 0;
+          const specification = row["Specification"] || "";
 
           // Calculate amount based on weight for specific items
           const amount = shouldUseWeight(itemType, row["Sub Category"])
@@ -288,9 +293,13 @@ const PurchaseModal = ({
 
           const gstAmount = (amount * gst) / 100;
 
+          // For fitting items, store Type in a separate field
+          const typeValue = itemType === "fitting" ? row["Type"] : undefined;
+
           return {
             name,
             pieces,
+            grade,
             weight,
             size: row["Size"] ? formatSize(row["Size"]) : undefined,
             gauge: row["Guage"] || undefined,
@@ -303,6 +312,8 @@ const PurchaseModal = ({
             rawData: row,
             type: itemType,
             subCategory: row["Sub Category"],
+            fittingType: typeValue,
+            specification,
           };
         });
 
@@ -418,6 +429,7 @@ const PurchaseModal = ({
         gst: item.gst,
         gstAmount: item.gstAmount,
         margin: item.margin || 0,
+        fittingType: item.type == "fitting" ? item.fittingType : "",
       }));
 
       const purchaseData = {
@@ -497,6 +509,9 @@ const PurchaseModal = ({
 
     if (itemType === "pipe" || itemType === "sheet") {
       columns.push(
+        <TableHead key="grade" className="text-right">
+          Grade
+        </TableHead>,
         <TableHead key="size" className="text-right">
           Size
         </TableHead>,
@@ -509,8 +524,17 @@ const PurchaseModal = ({
         <TableHead key="size" className="text-right">
           Size
         </TableHead>,
+        <TableHead key="type" className="text-right">
+          Type
+        </TableHead>,
         <TableHead key="category" className="text-right">
           Category
+        </TableHead>
+      );
+    } else if (itemType === "polish") {
+      columns.push(
+        <TableHead key="specification" className="text-right">
+          Specification
         </TableHead>
       );
     }
@@ -545,6 +569,9 @@ const PurchaseModal = ({
 
     if (itemType === "pipe" || itemType === "sheet") {
       cells.push(
+        <TableCell key="grade" className="text-right">
+          {item.grade || "-"}
+        </TableCell>,
         <TableCell key="size" className="text-right">
           {item.size || "-"}
         </TableCell>,
@@ -558,7 +585,16 @@ const PurchaseModal = ({
           {item.size || "-"}
         </TableCell>,
         <TableCell key="category" className="text-right">
+          {item.fittingType || "-"}
+        </TableCell>,
+        <TableCell key="category" className="text-right">
           {item.category || "-"}
+        </TableCell>
+      );
+    } else if (itemType === "polish") {
+      cells.push(
+        <TableCell key="size" className="text-right">
+          {item.specification || "-"}
         </TableCell>
       );
     }
@@ -612,11 +648,17 @@ const PurchaseModal = ({
                   <SelectValue placeholder="Select vendor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vendors.map((vendor) => (
-                    <SelectItem key={vendor._id} value={vendor._id}>
-                      {vendor.name}
+                  {vendors.length === 0 ? (
+                    <SelectItem value="No Vendors" disabled>
+                      No vendors found
                     </SelectItem>
-                  ))}
+                  ) : (
+                    vendors.map((vendor) => (
+                      <SelectItem key={vendor._id} value={vendor._id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
 
@@ -684,7 +726,7 @@ const PurchaseModal = ({
 
           <div>
             <label className="text-sm font-medium mb-1 block">
-              E-way Bill No.*
+              E-way Bill No.
             </label>
             <Input
               name="ewayBillNo"

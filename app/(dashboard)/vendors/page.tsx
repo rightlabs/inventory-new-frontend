@@ -119,6 +119,13 @@ export default function VendorsPage() {
     );
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -231,7 +238,7 @@ export default function VendorsPage() {
                         ₹{vendor.creditLimit.toLocaleString()}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        ₹{vendor.currentBalance.toLocaleString()}
+                        {formatCurrency(vendor?.currentBalance)}
                       </td>
                       <td className="p-4 align-middle">
                         <StatusBadge status={vendor.status} />
