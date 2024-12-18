@@ -10,7 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InventoryItem, ItemType } from "@/api/items";
+import {
+  InventoryItem,
+  ItemType,
+  PipeSheetItem,
+  FittingItem,
+  PolishItem,
+} from "@/api/items";
 import { toast } from "react-hot-toast";
 
 interface ItemFormProps {
@@ -50,14 +56,35 @@ export default function ItemForm({
     variant: (initialData as any)?.variant || null,
   });
 
+  const isPipeSheetData = (data: any): data is Omit<PipeSheetItem, "_id"> => {
+    return data.itemType === "PipeSheet";
+  };
+
+  const isFittingData = (data: any): data is Omit<FittingItem, "_id"> => {
+    return data.itemType === "Fitting";
+  };
+
+  const isPolishData = (data: any): data is Omit<PolishItem, "_id"> => {
+    return data.itemType === "Polish";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const submitData = {
         ...formData,
-        itemType, // Ensure itemType is included
+        itemType,
       };
-      await onSubmit(submitData);
+
+      if (
+        isPipeSheetData(submitData) ||
+        isFittingData(submitData) ||
+        isPolishData(submitData)
+      ) {
+        await onSubmit(submitData);
+      } else {
+        throw new Error("Invalid item type");
+      }
     } catch (error) {
       toast.error("Failed to save item");
     }
@@ -222,7 +249,10 @@ export default function ItemForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <label className="text-sm font-medium">Item Type</label>
-        <Select value={itemType} onValueChange={setItemType}>
+        <Select
+          value={itemType}
+          onValueChange={(value: string) => setItemType(value as ItemType)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select item type" />
           </SelectTrigger>

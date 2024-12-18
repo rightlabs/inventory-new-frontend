@@ -19,7 +19,7 @@ interface BaseItem {
 }
 
 // Specific item interfaces
-interface PipeSheetItem extends BaseItem {
+export interface PipeSheetItem extends BaseItem {
   itemType: "PipeSheet";
   type: "pipe" | "sheet";
   grade: "304" | "202";
@@ -28,7 +28,7 @@ interface PipeSheetItem extends BaseItem {
   weight: number;
 }
 
-interface FittingItem extends BaseItem {
+export interface FittingItem extends BaseItem {
   itemType: "Fitting";
   subCategory: string;
   size: string;
@@ -37,12 +37,13 @@ interface FittingItem extends BaseItem {
   weight?: number;
 }
 
-interface PolishItem extends BaseItem {
+export interface PolishItem extends BaseItem {
   itemType: "Polish";
   type: string;
   subCategory: string;
   specification: string;
   variant?: "One Side" | "Two Side" | null;
+  size?: number;
 }
 
 export type InventoryItem = PipeSheetItem | FittingItem | PolishItem;
@@ -61,33 +62,31 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-export const getItems = async (filters?: ItemFilters) => {
+export const getItems = async (filters: ItemFilters = {}) => {
   try {
     const queryParams = new URLSearchParams();
 
-    if (filters?.type) {
+    if (filters.type) {
       queryParams.append("type", filters.type);
     }
 
-    // Modified subcategory handling
-    if (filters?.subCategory && filters.subCategory !== "all") {
-      // For polish items, we need to handle the type field differently
+    if (filters.subCategory && filters.subCategory !== "all") {
       if (filters.type === "Polish") {
-        queryParams.append("type", filters.subCategory); // This matches the backend expectation
+        queryParams.append("type", filters.subCategory);
       } else {
         queryParams.append("subCategory", filters.subCategory);
       }
     }
 
-    if (filters?.searchTerm) {
+    if (filters.searchTerm) {
       queryParams.append("search", filters.searchTerm);
     }
 
-    if (filters?.startDate) {
+    if (filters.startDate) {
       queryParams.append("startDate", filters.startDate);
     }
 
-    if (filters?.endDate) {
+    if (filters.endDate) {
       queryParams.append("endDate", filters.endDate);
     }
 

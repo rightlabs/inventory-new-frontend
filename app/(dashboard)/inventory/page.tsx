@@ -28,7 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Plus, Download, Edit2, Package } from "lucide-react";
 import toast from "react-hot-toast";
-import { getItems, createItem, updateItem } from "@/api/items";
+import {
+  getItems,
+  createItem,
+  updateItem,
+  ItemType,
+  ItemFilters,
+} from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
 
 // TypeScript interfaces
@@ -145,18 +151,21 @@ export default function ItemsPage() {
     try {
       setLoading(true);
 
-      let filters;
+      let filters: ItemFilters = {};
 
       if (selectedType === "polish") {
         filters = {
-          type: "Polish",
+          type: "Polish" as ItemType,
           subCategory:
             selectedSubCategory !== "all" ? selectedSubCategory : undefined,
           searchTerm: debouncedSearchTerm,
         };
       } else {
         filters = {
-          type: selectedType === "fittings" ? "Fitting" : "PipeSheet",
+          type:
+            selectedType === "fittings"
+              ? ("Fitting" as ItemType)
+              : ("PipeSheet" as ItemType),
           subCategory:
             selectedSubCategory !== "all" ? selectedSubCategory : undefined,
           searchTerm: debouncedSearchTerm,
