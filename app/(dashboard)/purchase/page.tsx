@@ -176,7 +176,7 @@ export default function PurchasePage() {
               onOpenChange={setPaymentModalOpen}
               purchase={selectedPurchase}
               onSuccess={() => {
-                fetchPurchases(pagination.currentPage);
+                fetchPurchases();
                 setSelectedPurchase(null);
               }}
             />

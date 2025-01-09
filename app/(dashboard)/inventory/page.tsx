@@ -343,10 +343,13 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.size}</td>
               <td className="p-4 align-middle">{item.type}</td>
               <td className="p-4 align-middle text-right">
-                {item.currentStock} ({item?.unitType})
+                {Number(item.currentStock)
+                  .toFixed(2)
+                  .replace(/[.,]00$/, "")}{" "}
+                ({item?.unitType})
               </td>
               <td className="p-4 align-middle text-right">
-                ₹{item.purchaseRate.toFixed(2)}
+                ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
               </td>
               <td className="p-4 align-middle">
                 <StatusBadge status={item.status} />
@@ -413,10 +416,12 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.type}</td>
               <td className="p-4 align-middle">{item.specification}</td>
               <td className="p-4 align-middle text-right">
-                {item.currentStock}
+                {Number(item.currentStock)
+                  .toFixed(2)
+                  .replace(/[.,]00$/, "")}
               </td>
               <td className="p-4 align-middle text-right">
-                ₹{item.purchaseRate.toFixed(2)}
+                ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
               </td>
               <td className="p-4 align-middle">
                 <StatusBadge status={item.status} />

@@ -14,18 +14,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addPayment } from "@/api/transaction";
+import { addSalePayment } from "@/api/sale";
+import { createPurchase } from "@/api/purchase";
 import toast from "react-hot-toast";
+
+// Interfaces
+interface Sale {
+  _id: string;
+  saleNumber: string;
+  grandTotal: number;
+  balanceAmount: number;
+}
+
+interface Purchase {
+  _id: string;
+  purchaseNumber: string;
+  grandTotal: number;
+  balanceAmount: number;
+}
 
 interface PaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  purchase: {
-    _id: string;
-    purchaseNumber: string;
-    grandTotal: number;
-    balanceAmount: number;
-  };
+  sale?: Sale;
+  purchase?: Purchase;
   onSuccess: () => void;
 }
 
@@ -39,6 +51,7 @@ interface PaymentFormData {
 export default function PaymentModal({
   open,
   onOpenChange,
+  sale,
   purchase,
   onSuccess,
 }: PaymentModalProps) {
@@ -49,21 +62,32 @@ export default function PaymentModal({
     notes: "",
   });
 
+  const document = sale || purchase;
+  const documentType = sale ? "sale" : "purchase";
+  const documentNumber = sale ? sale.saleNumber : purchase?.purchaseNumber;
+
   const handleFullAmount = () => {
-    setFormData((prev) => ({
-      ...prev,
-      amount: purchase.balanceAmount.toString(),
-    }));
+    if (document) {
+      setFormData((prev) => ({
+        ...prev,
+        amount: document.balanceAmount.toString(),
+      }));
+    }
   };
 
   const handleSubmit = async () => {
     try {
+      if (!document) {
+        toast.error("Invalid document");
+        return;
+      }
+
       if (!formData.amount || Number(formData.amount) <= 0) {
         toast.error("Please enter a valid amount");
         return;
       }
 
-      if (Number(formData.amount) > purchase.balanceAmount) {
+      if (Number(formData.amount) > document.balanceAmount) {
         toast.error("Amount cannot be greater than balance amount");
         return;
       }
@@ -73,12 +97,19 @@ export default function PaymentModal({
         return;
       }
 
-      const response = await addPayment(purchase._id, {
+      const paymentData = {
         amount: Number(formData.amount),
         mode: formData.mode,
         reference: formData.reference,
-        notes: formData.notes || `Payment against ${purchase.purchaseNumber}`,
-      });
+        notes: formData.notes || `Payment against ${documentNumber}`,
+      };
+
+      let response;
+      if (sale) {
+        response = await addSalePayment(sale._id, paymentData);
+      } else if (purchase) {
+        response = await createPurchase(purchase._id, paymentData);
+      }
 
       if (response?.data?.statusCode === 200) {
         toast.success("Payment added successfully");
@@ -90,6 +121,8 @@ export default function PaymentModal({
     }
   };
 
+  if (!document) return null;
+
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
@@ -98,14 +131,16 @@ export default function PaymentModal({
 
       <div className="grid gap-4 py-4">
         <div>
-          <span className="block text-sm font-medium mb-2">Purchase Order</span>
-          <span className="text-sm">{purchase.purchaseNumber}</span>
+          <span className="block text-sm font-medium mb-2">
+            {documentType === "sale" ? "Sale Order" : "Purchase Order"}
+          </span>
+          <span className="text-sm">{documentNumber}</span>
         </div>
 
         <div>
           <span className="block text-sm font-medium mb-2">Balance Amount</span>
           <span className="text-sm">
-            ₹{purchase.balanceAmount.toLocaleString()}
+            ₹{document.balanceAmount.toLocaleString()}
           </span>
         </div>
 
@@ -124,7 +159,7 @@ export default function PaymentModal({
           </div>
           <Input
             type="number"
-            max={purchase.balanceAmount}
+            max={document.balanceAmount}
             value={formData.amount}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, amount: e.target.value }))
