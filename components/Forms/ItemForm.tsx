@@ -72,6 +72,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Type</label>
               <Select
                 value={formData.type}
+                disabled
                 onValueChange={(value) =>
                   setFormData({ ...formData, type: value })
                 }
@@ -89,6 +90,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Grade</label>
               <Select
                 value={formData.grade}
+                disabled
                 onValueChange={(value) =>
                   setFormData({ ...formData, grade: value })
                 }
@@ -105,6 +107,7 @@ export default function ItemForm({
             <div className="space-y-2">
               <label className="text-sm font-medium">Size</label>
               <Input
+                disabled
                 value={formData.size}
                 onChange={(e) =>
                   setFormData({ ...formData, size: e.target.value })
@@ -114,6 +117,7 @@ export default function ItemForm({
             <div className="space-y-2">
               <label className="text-sm font-medium">Gauge</label>
               <Input
+                disabled
                 value={formData.gauge}
                 onChange={(e) =>
                   setFormData({ ...formData, gauge: e.target.value })
@@ -195,6 +199,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Type</label>
               <Input
                 value={formData.type}
+                disabled
                 onChange={(e) =>
                   setFormData({ ...formData, type: e.target.value })
                 }
@@ -204,6 +209,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Specification</label>
               <Input
                 value={formData.specification}
+                disabled
                 onChange={(e) =>
                   setFormData({ ...formData, specification: e.target.value })
                 }
@@ -213,6 +219,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Variant</label>
               <Select
                 value={formData.variant || ""}
+                disabled
                 onValueChange={(value) =>
                   setFormData({ ...formData, variant: value })
                 }
