@@ -16,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Edit2, Package } from "lucide-react";
+import { Edit2, Package } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
@@ -122,6 +121,8 @@ const POLISH_SUBCATEGORIES = [
   "Core Bit",
 ].sort();
 
+const GRADES = ["304", "202"];
+
 export default function ItemsPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +131,7 @@ export default function ItemsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   // Implement throttling for search
@@ -144,23 +146,27 @@ export default function ItemsPage() {
   const fetchItems = useCallback(async () => {
     try {
       setLoading(true);
-
-      let filters;
+      let filters: any = {
+        searchTerm: debouncedSearchTerm,
+      };
 
       if (selectedType === "polish") {
-        filters = {
-          type: "Polish",
-          subCategory:
-            selectedSubCategory !== "all" ? selectedSubCategory : undefined,
-          searchTerm: debouncedSearchTerm,
-        };
+        filters.type = "Polish";
+        if (selectedSubCategory !== "all") {
+          filters.subCategory = selectedSubCategory;
+        }
+      } else if (selectedType === "fittings") {
+        filters.type = "Fitting";
+        if (selectedSubCategory !== "all") {
+          filters.subCategory = selectedSubCategory;
+        }
       } else {
-        filters = {
-          type: selectedType === "fittings" ? "Fitting" : "PipeSheet",
-          subCategory:
-            selectedSubCategory !== "all" ? selectedSubCategory : undefined,
-          searchTerm: debouncedSearchTerm,
-        };
+        filters.type = "PipeSheet";
+        // Add type filter for pipes/sheets
+        filters.itemSubType = selectedType === "pipes" ? "pipe" : "sheet";
+        if (selectedGrade && selectedGrade !== "all") {
+          filters.grade = selectedGrade;
+        }
       }
 
       const response = await getItems(filters);
@@ -170,6 +176,7 @@ export default function ItemsPage() {
           ...item,
           status: getItemStatus(item),
         }));
+
         setItems(items);
       }
     } catch (error) {
@@ -177,7 +184,7 @@ export default function ItemsPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedType, selectedSubCategory, debouncedSearchTerm]);
+  }, [selectedType, selectedSubCategory, selectedGrade, debouncedSearchTerm]);
 
   useEffect(() => {
     fetchItems();
@@ -185,7 +192,31 @@ export default function ItemsPage() {
 
   useEffect(() => {
     setSelectedSubCategory("");
+    setSelectedGrade(null);
   }, [selectedType]);
+
+  const GradeFilter = () => {
+    if (selectedType !== "pipes" && selectedType !== "sheets") return null;
+
+    return (
+      <Select
+        value={selectedGrade || undefined}
+        onValueChange={setSelectedGrade}
+      >
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Filter by grade" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Grades</SelectItem>
+          {GRADES.map((grade) => (
+            <SelectItem key={grade} value={grade}>
+              Grade {grade}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
 
   const EmptyState = ({ message }: { message: string }) => (
     <div className="flex flex-col items-center justify-center py-12 px-4">
@@ -511,24 +542,41 @@ export default function ItemsPage() {
       : true;
 
     // Type matching
-    if (selectedType === "polish" && item.itemType === "Polish") {
-      // Check if subcategory is selected
-      if (!selectedSubCategory || selectedSubCategory === "all") {
-        return true;
-      }
-      // Direct comparison between item type and selected subcategory
-      return (item as PolishItem).type === selectedSubCategory;
+    if (item.itemType === "PipeSheet") {
+      const pipeSheetItem = item as PipeSheetItem;
+      const matchesType =
+        selectedType === "pipes"
+          ? pipeSheetItem.type === "pipe"
+          : pipeSheetItem.type === "sheet";
+
+      const matchesGrade =
+        !selectedGrade ||
+        selectedGrade === "all" ||
+        pipeSheetItem.grade === selectedGrade;
+
+      return matchesSearch && matchesType && matchesGrade;
     }
 
-    // Handle other types (fittings, pipes, etc.)
-    const matchesType =
-      selectedType === "polish"
-        ? item.itemType === "Polish"
-        : selectedType === "fittings"
-        ? item.itemType === "Fitting"
-        : item.itemType === "PipeSheet";
+    // Handle polish items
+    if (selectedType === "polish" && item.itemType === "Polish") {
+      if (!selectedSubCategory || selectedSubCategory === "all") {
+        return matchesSearch;
+      }
+      return matchesSearch && (item as PolishItem).type === selectedSubCategory;
+    }
 
-    return matchesSearch && matchesType;
+    // Handle fitting items
+    if (selectedType === "fittings" && item.itemType === "Fitting") {
+      if (!selectedSubCategory || selectedSubCategory === "all") {
+        return matchesSearch;
+      }
+      return (
+        matchesSearch &&
+        (item as FittingItem).subCategory === selectedSubCategory
+      );
+    }
+
+    return false;
   });
 
   const handleSubmit = async (data: Partial<InventoryItem>) => {
@@ -609,10 +657,12 @@ export default function ItemsPage() {
                 className="w-full"
               />
             </div>
-            {selectedType !== "pipes" && <SubCategoryFilter />}
-            {/* <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" /> Export
-            </Button> */}
+            {(selectedType === "pipes" || selectedType === "sheets") && (
+              <GradeFilter />
+            )}
+            {(selectedType === "fittings" || selectedType === "polish") && (
+              <SubCategoryFilter />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -620,7 +670,8 @@ export default function ItemsPage() {
       {/* Tabs Section */}
       <Tabs value={selectedType} onValueChange={setSelectedType}>
         <TabsList>
-          <TabsTrigger value="pipes">Pipes and Sheets</TabsTrigger>
+          <TabsTrigger value="pipes">Pipes</TabsTrigger>
+          <TabsTrigger value="sheets">Sheets</TabsTrigger>
           <TabsTrigger value="fittings">Fittings</TabsTrigger>
           <TabsTrigger value="polish">Polish Items</TabsTrigger>
         </TabsList>
@@ -629,10 +680,8 @@ export default function ItemsPage() {
         <TabsContent value="pipes">
           <Card>
             <CardHeader>
-              <CardTitle>Pipe and Sheet Items</CardTitle>
-              <CardDescription>
-                View and manage pipe and sheet inventory
-              </CardDescription>
+              <CardTitle>Pipe Items</CardTitle>
+              <CardDescription>View and manage pipe inventory</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (

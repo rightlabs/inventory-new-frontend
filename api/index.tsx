@@ -1,6 +1,7 @@
 import { getToken } from "@/utils/getToken";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import Cookies from "js-cookie";
 
 export const prefix = "/api/v1";
 export const baseurl = "http://localhost:9010";
@@ -40,7 +41,8 @@ API_INSTANCE.interceptors.response.use(
       // Server responded with an error status code
       if (error.response.status === 403) {
         toast.error("Session expired! Please login again.");
-        localStorage.removeItem("token"); // Clear token
+        // localStorage.removeItem("token"); // Clear token
+        Cookies.remove("authToken"); // Clear token
         window.location.href = "/"; // Redirect to login page
       } else {
         // Handle other error responses

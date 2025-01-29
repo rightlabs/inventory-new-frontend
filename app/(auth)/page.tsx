@@ -38,7 +38,6 @@ export default function LoginPage() {
       const errorMessage =
         axiosError.response?.data?.message || "Invalid email or password";
       console.log(errorMessage);
-      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

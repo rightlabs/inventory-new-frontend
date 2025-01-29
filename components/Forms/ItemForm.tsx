@@ -130,6 +130,7 @@ export default function ItemForm({
               <label className="text-sm font-medium">Subcategory</label>
               <Select
                 value={formData.subCategory}
+                disabled
                 onValueChange={(value) =>
                   setFormData({ ...formData, subCategory: value })
                 }
@@ -149,6 +150,7 @@ export default function ItemForm({
             <div className="space-y-2">
               <label className="text-sm font-medium">Size</label>
               <Input
+                disabled
                 value={formData.size}
                 onChange={(e) =>
                   setFormData({ ...formData, size: e.target.value })
@@ -156,21 +158,32 @@ export default function ItemForm({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
+              <label className="text-sm font-medium">Grade</label>
               <Select
-                value={formData.type}
+                value={formData.grade}
+                disabled
                 onValueChange={(value) =>
-                  setFormData({ ...formData, type: value })
+                  setFormData({ ...formData, grade: value })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Round">Round</SelectItem>
-                  <SelectItem value="Square">Square</SelectItem>
+                  <SelectItem value="304">304</SelectItem>
+                  <SelectItem value="202">202</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Type</label>
+              <Input
+                disabled
+                value={formData.type}
+                onChange={(e) =>
+                  setFormData({ ...formData, size: e.target.value })
+                }
+              />
             </div>
           </>
         );
@@ -222,7 +235,7 @@ export default function ItemForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <label className="text-sm font-medium">Item Type</label>
-        <Select value={itemType} onValueChange={setItemType}>
+        <Select value={itemType} onValueChange={setItemType} disabled={true}>
           <SelectTrigger>
             <SelectValue placeholder="Select item type" />
           </SelectTrigger>
@@ -241,6 +254,7 @@ export default function ItemForm({
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
+            disabled
           />
         </div>
         <div className="space-y-2">
@@ -249,6 +263,7 @@ export default function ItemForm({
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
             required
+            disabled
           />
         </div>
 

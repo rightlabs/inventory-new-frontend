@@ -30,6 +30,7 @@ interface PipeSheetItem extends BaseItem {
 
 interface FittingItem extends BaseItem {
   itemType: "Fitting";
+  grade: "304" | "202"; // Add grade
   subCategory: string;
   size: string;
   type: "Round" | "Square";
