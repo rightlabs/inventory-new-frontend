@@ -282,8 +282,12 @@ const PurchaseModal = ({
 
         const rows = XLSX.utils.sheet_to_json(worksheet);
         const processedItems = rows.map((row: any): ProcessedItem => {
-          const currentType =
-            row["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe";
+          let currentType = itemType;
+          if (itemType === "pipe" || itemType === "sheet") {
+            // For pipe/sheet, get type from Excel
+            currentType =
+              row["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe";
+          }
           const name = formatItemName(row, currentType);
           const grade = row["Grade"];
           const pieces = Number(row["Pieces"]) || undefined;
@@ -440,24 +444,49 @@ const PurchaseModal = ({
       if (!calculations) return;
 
       // Transform items to match backend schema
-      const transformedItems = processedData.items.map((item) => ({
-        name: item.name,
-        type:
-          item.rawData["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe", // Use the type from Excel data
-        size: item.size,
-        gauge: item.gauge,
-        grade: item.grade,
-        category: item.category,
-        subCategory: item.subCategory,
-        pieces: item.pieces,
-        weight: item.weight,
-        rate: item.rate,
-        amount: item.amount,
-        gst: item.gst,
-        gstAmount: item.gstAmount,
-        margin: item.margin || 0,
-        fittingType: item.type == "fitting" ? item.fittingType : "",
-      }));
+      const transformedItems = processedData.items.map((item) => {
+        const baseItem = {
+          name: item.name,
+          pieces: item.pieces,
+          weight: item.weight,
+          rate: item.rate,
+          amount: item.amount,
+          gst: item.gst,
+          gstAmount: item.gstAmount,
+          margin: item.margin || 0,
+        };
+
+        if (itemType === "polish") {
+          return {
+            ...baseItem,
+            type: "polish",
+            specification: item.specification,
+            subCategory: item.subCategory,
+          };
+        }
+
+        if (itemType === "fitting") {
+          return {
+            ...baseItem,
+            type: "fitting",
+            grade: item.grade,
+            size: item.size,
+            category: item.category,
+            subCategory: item.subCategory,
+            fittingType: item.fittingType,
+          };
+        }
+
+        // For pipe/sheet
+        return {
+          ...baseItem,
+          type:
+            item.rawData["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe",
+          size: item.size,
+          gauge: item.gauge,
+          grade: item.grade,
+        };
+      });
 
       const purchaseData = {
         vendorId: formData.vendorId,
