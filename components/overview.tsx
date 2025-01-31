@@ -1,5 +1,4 @@
 "use client";
-
 import {
   Bar,
   BarChart,
@@ -9,22 +8,21 @@ import {
   Tooltip,
 } from "recharts";
 
-const data = [
-  { month: "Jan", revenue: 4000, costs: 2400 },
-  { month: "Feb", revenue: 3000, costs: 1398 },
-  { month: "Mar", revenue: 2000, costs: 9800 },
-  { month: "Apr", revenue: 2780, costs: 3908 },
-  { month: "May", revenue: 1890, costs: 4800 },
-  { month: "Jun", revenue: 2390, costs: 3800 },
-  { month: "Jul", revenue: 3490, costs: 4300 },
-  { month: "Aug", revenue: 4000, costs: 2400 },
-  { month: "Sep", revenue: 3000, costs: 1398 },
-  { month: "Oct", revenue: 2000, costs: 9800 },
-  { month: "Nov", revenue: 2780, costs: 3908 },
-  { month: "Dec", revenue: 1890, costs: 4800 },
-];
+interface MonthlyData {
+  month: string;
+  revenue: number;
+  costs: number;
+}
 
-export function Overview() {
+interface OverviewProps {
+  data: MonthlyData[];
+}
+
+export function Overview({ data }: OverviewProps) {
+  if (!data || data.length === 0) {
+    return <div>No data available</div>;
+  }
+
   return (
     <div className="h-[350px] mt-4">
       <ResponsiveContainer width="100%" height="100%">
@@ -44,7 +42,7 @@ export function Overview() {
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `₹${value}`}
+            tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
           />
           <Tooltip
             cursor={{ fill: "#F1F5F9" }}
@@ -55,6 +53,7 @@ export function Overview() {
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             }}
             labelStyle={{ color: "#1E293B", fontWeight: 500 }}
+            formatter={(value) => [`₹${value.toLocaleString()}`]}
           />
           <Bar
             dataKey="revenue"

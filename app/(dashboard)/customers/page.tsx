@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,93 +12,67 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Download,
-  Plus,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  AlertCircle,
-  FileText,
-  IndianRupee,
-} from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-interface Customer {
-  id: string;
-  name: string;
-  type: "retail" | "wholesale" | "distributor";
-  gstin?: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  address: string;
-  creditLimit: number;
-  currentBalance: number;
-  status: "active" | "inactive";
-  paymentTerms: string;
-  lastPurchase?: string;
-  totalPurchases: number;
-  createdAt: string;
-}
+import { Download, Plus, FileText } from "lucide-react";
+import { getCustomers, Customer, getCustomerTotalSales } from "@/api/customer";
+import CustomerForm from "@/components/Forms/CustomerForm";
+import { LedgerModal } from "@/components/Forms/LedgerModal";
+import { getCustomerLedger } from "@/api/customer";
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    null
+  );
+  const [transactions, setTransactions] = useState([]);
 
-  // Sample customers data
-  const customers: Customer[] = [
-    {
-      id: "C001",
-      name: "Global Traders",
-      type: "wholesale",
-      gstin: "09AAACH7409R1ZZ",
-      contactPerson: "Rahul Kumar",
-      phone: "+91 9876543210",
-      email: "rahul@globaltraders.com",
-      address: "123, Industrial Area, Phase 1, New Delhi - 110020",
-      creditLimit: 500000,
-      currentBalance: 125000,
-      status: "active",
-      paymentTerms: "Net 30",
-      lastPurchase: "2024-03-15",
-      totalPurchases: 1250000,
-      createdAt: "2023-01-15",
-    },
-    {
-      id: "C002",
-      name: "City Hardware",
-      type: "retail",
-      gstin: "07BBBCH8809R1ZZ",
-      contactPerson: "Amit Shah",
-      phone: "+91 9876543211",
-      email: "amit@cityhardware.com",
-      address: "456, Market Road, Mumbai - 400001",
-      creditLimit: 200000,
-      currentBalance: 75000,
-      status: "active",
-      paymentTerms: "Net 15",
-      lastPurchase: "2024-03-18",
-      totalPurchases: 850000,
-      createdAt: "2023-03-20",
-    },
-  ];
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      const [customersResponse, ...totalSalesResponses] = await Promise.all([
+        getCustomers(),
+        ...customers.map((customer) => getCustomerTotalSales(customer._id)),
+      ]);
+
+      if (customersResponse?.data?.statusCode === 200) {
+        const customersWithTotalSales = await Promise.all(
+          customersResponse.data.data.map(async (customer, index) => {
+            const totalSalesResponse = await getCustomerTotalSales(
+              customer._id
+            );
+            return {
+              ...customer,
+              totalSales: totalSalesResponse?.data?.data?.totalSales || 0,
+            };
+          })
+        );
+        setCustomers(customersWithTotalSales);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch customers");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewLedger = async (customerId: string) => {
+    try {
+      setSelectedCustomerId(customerId);
+      const response = await getCustomerLedger(customerId);
+      if (response?.data.success) {
+        setTransactions(response.data.data);
+        setShowLedger(true);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch ledger");
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   const StatusBadge = ({ status }: { status: Customer["status"] }) => {
     const styles = {
@@ -125,9 +100,16 @@ export default function CustomersPage() {
       <span
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[type]}`}
       >
-        {type.charAt(0).toUpperCase() + type.slice(1)}
+        {type?.charAt(0).toUpperCase() + type?.slice(1)}
       </span>
     );
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
   };
 
   return (
@@ -146,128 +128,20 @@ export default function CustomersPage() {
               <Plus className="mr-2 h-4 w-4" /> Add Customer
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Add New Customer</DialogTitle>
               <DialogDescription>
                 Enter customer details and business information
               </DialogDescription>
             </DialogHeader>
-
-            <div className="grid gap-6 py-4">
-              {/* Basic Information */}
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Business/Customer Name*
-                  </label>
-                  <Input placeholder="Enter business name" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Customer Type*
-                    </label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="retail">Retail</SelectItem>
-                        <SelectItem value="wholesale">Wholesale</SelectItem>
-                        <SelectItem value="distributor">Distributor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      GSTIN
-                    </label>
-                    <Input placeholder="Enter GSTIN (if applicable)" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Contact Person*
-                    </label>
-                    <Input placeholder="Enter contact person name" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Phone Number*
-                    </label>
-                    <Input placeholder="Enter phone number" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Email Address
-                  </label>
-                  <Input type="email" placeholder="Enter email address" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Business Address*
-                  </label>
-                  <Input placeholder="Enter complete address" />
-                </div>
-              </div>
-
-              {/* Financial Information */}
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Credit Limit
-                    </label>
-                    <Input type="number" placeholder="Enter credit limit" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Payment Terms
-                    </label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select terms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="immediate">Immediate</SelectItem>
-                        <SelectItem value="net15">Net 15</SelectItem>
-                        <SelectItem value="net30">Net 30</SelectItem>
-                        <SelectItem value="net45">Net 45</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Opening Balance
-                  </label>
-                  <Input type="number" placeholder="Enter opening balance" />
-                </div>
-              </div>
-
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Set appropriate credit limits based on customer type and
-                  payment history.
-                </AlertDescription>
-              </Alert>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button>Add Customer</Button>
-            </div>
+            <CustomerForm
+              onSuccess={() => {
+                setOpen(false);
+                fetchCustomers();
+              }}
+              onCancel={() => setOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -284,101 +158,111 @@ export default function CustomersPage() {
                 View and manage your customer information
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" /> Export
-              </Button>
-            </div>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" /> Export
+            </Button>
           </div>
         </CardHeader>
+
         <CardContent>
-          <div className="rounded-md border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Customer
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Type
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Contact
-                  </th>
-                  <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    Credit Limit
-                  </th>
-                  <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    Balance
-                  </th>
-                  <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                    Total Sales
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="h-12 px-4 text-center align-middle text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((customer) => (
-                  <tr
-                    key={customer.id}
-                    className="border-b transition-colors hover:bg-muted/50"
-                  >
-                    <td className="p-4 align-middle font-medium">
-                      {customer.id}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <div>
-                        <div className="font-medium">{customer.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {customer.contactPerson}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle">
-                      <TypeBadge type={customer.type} />
-                    </td>
-                    <td className="p-4 align-middle">
-                      <div className="text-sm">
-                        <div>{customer.phone}</div>
-                        <div className="text-muted-foreground">
-                          {customer.email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{customer.creditLimit.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{customer.currentBalance.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle text-right">
-                      ₹{customer.totalPurchases.toLocaleString()}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <StatusBadge status={customer.status} />
-                    </td>
-                    <td className="p-4 align-middle">
-                      <div className="flex justify-center gap-2">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    </td>
+          {isLoading ? (
+            <div className="text-center py-4">Loading customers...</div>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      ID
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Customer
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Contact
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Credit Limit
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Balance
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Total Sales
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="h-12 px-4 text-center align-middle text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {customers.map((customer) => (
+                    <tr
+                      key={customer.id}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <td className="p-4 align-middle font-medium">
+                        {customer.id}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div>
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {customer.contactPerson}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="p-4 align-middle">
+                        <div className="text-sm">
+                          <div>{customer.phone}</div>
+                          <div className="text-muted-foreground">
+                            {customer.email}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        {formatCurrency(customer.creditLimit)}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        {formatCurrency(customer.currentBalance)}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        {formatCurrency(customer.totalSales)}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <StatusBadge status={customer.status} />
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewLedger(customer._id)}
+                          >
+                            <FileText className="h-4 w-4 " />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {showLedger && selectedCustomerId && (
+        <LedgerModal
+          transactions={transactions}
+          open={showLedger}
+          onClose={() => setShowLedger(false)}
+        />
+      )}
     </div>
   );
 }

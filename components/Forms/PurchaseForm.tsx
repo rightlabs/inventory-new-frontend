@@ -114,7 +114,7 @@ const FILE_HEADERS = {
     "Weight",
     "Rate",
     "GST",
-    "Margin (%)",
+    // "Margin (%)",
   ],
   sheet: [
     "Type",
@@ -125,10 +125,11 @@ const FILE_HEADERS = {
     "Weight",
     "Rate",
     "GST",
-    "Margin (%)",
+    // "Margin (%)",
   ],
   fitting: [
     "Sub Category",
+    "Grade",
     "Type",
     "Size",
     "Category",
@@ -136,7 +137,7 @@ const FILE_HEADERS = {
     "Weight",
     "Rate",
     "GST",
-    "Margin (%)",
+    // "Margin (%)",
   ],
   polish: [
     "Sub Category",
@@ -144,7 +145,7 @@ const FILE_HEADERS = {
     "Pieces",
     "Rate",
     "GST",
-    "Margin (%)",
+    // "Margin (%)",
   ],
 };
 
@@ -216,12 +217,15 @@ const PurchaseModal = ({
     const parts = [];
 
     if (type === "pipe" || type === "sheet") {
-      if (row["Type"]) parts.push(row["Type"]);
+      // Explicitly use the itemType
+      const prefix = type === "pipe" ? "Pipe" : "Sheet";
+      parts.push(prefix);
       if (row["Grade"]) parts.push(row["Grade"]);
       if (row["Size"]) parts.push(formatSize(row["Size"]));
       if (row["Guage"]) parts.push(`${row["Guage"]}G`);
     } else if (type === "fitting") {
       if (row["Sub Category"]) parts.push(row["Sub Category"]);
+      if (row["Grade"]) parts.push(row["Grade"]); // Add grade
       if (row["Type"]) parts.push(row["Type"]);
       if (row["Size"]) parts.push(formatSize(row["Size"]));
       if (row["Category"]) parts.push(row["Category"]);
@@ -278,7 +282,13 @@ const PurchaseModal = ({
 
         const rows = XLSX.utils.sheet_to_json(worksheet);
         const processedItems = rows.map((row: any): ProcessedItem => {
-          const name = formatItemName(row, itemType);
+          let currentType = itemType;
+          if (itemType === "pipe" || itemType === "sheet") {
+            // For pipe/sheet, get type from Excel
+            currentType =
+              row["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe";
+          }
+          const name = formatItemName(row, currentType);
           const grade = row["Grade"];
           const pieces = Number(row["Pieces"]) || undefined;
           const weight = Number(row["Weight"]) || undefined;
@@ -296,6 +306,25 @@ const PurchaseModal = ({
           // For fitting items, store Type in a separate field
           const typeValue = itemType === "fitting" ? row["Type"] : undefined;
 
+          if (itemType === "fitting") {
+            return {
+              name,
+              pieces,
+              grade: row["Grade"], // Add grade for fittings
+              weight,
+              size: row["Size"] ? formatSize(row["Size"]) : undefined,
+              category: row["Category"] || undefined,
+              rate,
+              amount,
+              gst,
+              gstAmount,
+              rawData: row,
+              type: itemType,
+              subCategory: row["Sub Category"],
+              fittingType: typeValue,
+            };
+          }
+
           return {
             name,
             pieces,
@@ -308,9 +337,9 @@ const PurchaseModal = ({
             amount,
             gst,
             gstAmount,
-            margin: Number(row["Margin (%)"]) || 0,
+            // margin: Number(row["Margin (%)"]) || 0,
             rawData: row,
-            type: itemType,
+            type: currentType,
             subCategory: row["Sub Category"],
             fittingType: typeValue,
             specification,
@@ -401,8 +430,20 @@ const PurchaseModal = ({
 
   const handleSubmit = async () => {
     try {
-      if (!formData.vendorId || !formData.date || !formData.invoiceNo) {
-        toast.error("Please fill in all required fields");
+      const requiredFields = [
+        { name: "vendorId", label: "Vendor" },
+        { name: "date", label: "Date" },
+        { name: "invoiceNo", label: "Invoice No" },
+      ];
+      const missingFields = requiredFields.filter(
+        (field) => !formData[field.name]
+      );
+      if (missingFields.length > 0) {
+        toast.error(
+          `Please fill in the following required field${
+            missingFields.length > 1 ? "s" : ""
+          }: ${missingFields.map((field) => field.label).join(", ")}`
+        );
         return;
       }
 
@@ -415,22 +456,49 @@ const PurchaseModal = ({
       if (!calculations) return;
 
       // Transform items to match backend schema
-      const transformedItems = processedData.items.map((item) => ({
-        name: item.name,
-        type: item.type,
-        size: item.size,
-        gauge: item.gauge,
-        category: item.category,
-        subCategory: item.subCategory,
-        pieces: item.pieces,
-        weight: item.weight,
-        rate: item.rate,
-        amount: item.amount,
-        gst: item.gst,
-        gstAmount: item.gstAmount,
-        margin: item.margin || 0,
-        fittingType: item.type == "fitting" ? item.fittingType : "",
-      }));
+      const transformedItems = processedData.items.map((item) => {
+        const baseItem = {
+          name: item.name,
+          pieces: item.pieces,
+          weight: item.weight,
+          rate: item.rate,
+          amount: item.amount,
+          gst: item.gst,
+          gstAmount: item.gstAmount,
+          margin: item.margin || 0,
+        };
+
+        if (itemType === "polish") {
+          return {
+            ...baseItem,
+            type: "polish",
+            specification: item.specification,
+            subCategory: item.subCategory,
+          };
+        }
+
+        if (itemType === "fitting") {
+          return {
+            ...baseItem,
+            type: "fitting",
+            grade: item.grade,
+            size: item.size,
+            category: item.category,
+            subCategory: item.subCategory,
+            fittingType: item.fittingType,
+          };
+        }
+
+        // For pipe/sheet
+        return {
+          ...baseItem,
+          type:
+            item.rawData["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe",
+          size: item.size,
+          gauge: item.gauge,
+          grade: item.grade,
+        };
+      });
 
       const purchaseData = {
         vendorId: formData.vendorId,
@@ -522,6 +590,9 @@ const PurchaseModal = ({
     } else if (itemType === "fitting") {
       columns.push(
         <TableHead key="size" className="text-right">
+          Grade
+        </TableHead>,
+        <TableHead key="size" className="text-right">
           Size
         </TableHead>,
         <TableHead key="type" className="text-right">
@@ -582,10 +653,13 @@ const PurchaseModal = ({
     } else if (itemType === "fitting") {
       cells.push(
         <TableCell key="size" className="text-right">
+          {item.grade || "-"}
+        </TableCell>,
+        <TableCell key="size" className="text-right">
           {item.size || "-"}
         </TableCell>,
         <TableCell key="category" className="text-right">
-          {item.fittingType || "-"}
+          {item.rawData.Type || "-"}
         </TableCell>,
         <TableCell key="category" className="text-right">
           {item.category || "-"}

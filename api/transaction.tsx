@@ -40,3 +40,20 @@ export const addPayment = async (
     throw error;
   }
 };
+
+export const addSalePayment = async (
+  saleId: string,
+  data: {
+    amount: number;
+    mode: "cash" | "cheque" | "online";
+    reference?: string;
+    notes?: string;
+  }
+) => {
+  try {
+    const res = await API_INSTANCE.post(`/sale/${saleId}/payments`, data);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
