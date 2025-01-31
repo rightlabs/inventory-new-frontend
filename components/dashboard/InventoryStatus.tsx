@@ -1,14 +1,14 @@
 // components/dashboard/InventoryStatus.tsx
 export function InventoryStatus({ stats }) {
   return (
-    <div className="space-y-4">
-      <div className="bg-[#F3E8FF] rounded-lg p-4">
+    <div className="flex w-full justify-between gap-5">
+      <div className="bg-[#F3E8FF] rounded-lg p-4 w-1/3">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-purple-500">
-            <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
-                d="M7 0C3.13438 0 0 3.13438 0 7C0 10.8656 3.13438 14 7 14C10.8656 14 14 10.8656 14 7C14 3.13438 10.8656 0 7 0ZM7 12.8333C3.78125 12.8333 1.16667 10.2188 1.16667 7C1.16667 3.78125 3.78125 1.16667 7 1.16667C10.2188 1.16667 12.8333 3.78125 12.8333 7C12.8333 10.2188 10.2188 12.8333 7 12.8333Z"
-                fill="#7C3AED"
+                d="M2 2h12v3H2V2zm0 4.5h12v3H2v-3zm0 4.5h12v3H2v-3z"
+                fill="currentColor"
               />
             </svg>
           </div>
@@ -17,7 +17,7 @@ export function InventoryStatus({ stats }) {
         <p className="text-4xl font-bold text-purple-900">{stats.totalItems}</p>
       </div>
 
-      <div className="bg-[#FEE2E2] rounded-lg p-4">
+      <div className="bg-[#FEE2E2] rounded-lg p-4 w-1/3">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-red-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -32,7 +32,7 @@ export function InventoryStatus({ stats }) {
         <p className="text-4xl font-bold text-red-900">{stats.lowStockItems}</p>
       </div>
 
-      <div className="bg-[#DBEAFE] rounded-lg p-4">
+      <div className="bg-[#DBEAFE] rounded-lg p-4 w-1/3">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-blue-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
