@@ -1,58 +1,7 @@
+import { Sale } from "@/types/type";
 import API_INSTANCE from "./index";
 
-export interface SaleItem {
-  item: string;
-  name: string;
-  type: "pipe" | "sheet" | "fitting" | "polish";
-  quantity?: number;
-  weight?: number;
-  rate: number;
-  margin: number;
-  sellingPrice: number;
-  amount: number;
-  gst: number;
-  gstAmount: number;
-}
-
-export interface Sale {
-  customerId: string;
-  date: Date;
-  deliveryAddress?: string;
-  vehicleNo?: string;
-  items: SaleItem[];
-  discount: number;
-  taxableAmount: number;
-  totalTax: number;
-  discountAmount: number;
-  grandTotal: number;
-  payments?: {
-    amount: number;
-    mode: "cash" | "cheque" | "online";
-    reference?: string;
-    date: Date;
-  }[];
-}
-
-export interface SaleResponse {
-  _id: string;
-  saleNumber: string;
-  date: string;
-  customer: {
-    _id: string;
-    name: string;
-    gstin: string;
-  };
-  itemCount: number;
-  totalAmount: number;
-  discount: number;
-  gstAmount: number;
-  grandTotal: number;
-  balanceAmount: number;
-  status: "draft" | "processing" | "completed";
-  paymentStatus: "unpaid" | "partial" | "paid";
-}
-
-export const createSale = async (data: Sale) => {
+export const createSale = async (data: Sale | any) => {
   try {
     const res = await API_INSTANCE.post("/sale", data);
     return res;

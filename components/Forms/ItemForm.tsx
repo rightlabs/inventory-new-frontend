@@ -16,7 +16,8 @@ import {
   PipeSheetItem,
   FittingItem,
   PolishItem,
-} from "@/api/items";
+  SaleItem,
+} from "@/types/type";
 import { toast } from "react-hot-toast";
 
 interface ItemFormProps {
@@ -25,16 +26,51 @@ interface ItemFormProps {
   onCancel: () => void;
 }
 
+export interface ItemSelectionProps {
+  item: SaleItem;
+  index: number;
+  items: InventoryItem[];
+  onItemChange: (index: number, updatedItem: Partial<SaleItem>) => void;
+  quantityErrors: {
+    [key: number]: {
+      hasError: boolean;
+      message: string;
+    };
+  };
+}
+
+interface ItemFormData {
+  itemType: ItemType;
+  name: string;
+  code: string;
+  currentStock: number;
+  minimumStock: number;
+  purchaseRate: number;
+  sellingRate: number;
+  margin: number;
+  gst: number;
+  unitType: "weight" | "pieces";
+  // Type specific fields
+  type: string;
+  grade: string | "304" | "202";
+  size: string;
+  gauge: string;
+  weight: number;
+  subCategory: string;
+  specification: string;
+  variant: string;
+}
+
 export default function ItemForm({
   initialData,
   onSubmit,
   onCancel,
-}: ItemFormProps) {
-  const [itemType, setItemType] = useState<ItemType>(
+}: ItemFormProps | any) {
+  const [itemType, setItemType] = useState<ItemType | any>(
     initialData?.itemType || "PipeSheet"
   );
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ItemFormData>({
     itemType,
     name: initialData?.name || "",
     code: initialData?.code || "",

@@ -35,53 +35,13 @@ import {
   ItemFilters,
 } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
-
-// TypeScript interfaces
-interface BaseItem {
-  _id: string;
-  code: string;
-  name: string;
-  currentStock: number;
-  minimumStock: number;
-  purchaseRate: number;
-  sellingRate: number;
-  margin: number;
-  gst: number;
-  lastPurchaseDate?: string;
-  unitType: "weight" | "pieces";
-  status: "in_stock" | "low_stock" | "out_of_stock";
-}
-
-interface PipeSheetItem extends BaseItem {
-  itemType: "PipeSheet";
-  type: "pipe" | "sheet";
-  grade: "304" | "202";
-  size: string;
-  gauge: string;
-  weight: number;
-  pieces?: number;
-}
-
-interface FittingItem extends BaseItem {
-  itemType: "Fitting";
-  grade: "304" | "202"; // Add grade
-  category: string;
-  subCategory: string;
-  size: string;
-  type: "Round" | "Square";
-  variant?: "One Side" | "Two Side" | null;
-  weight?: number;
-}
-
-interface PolishItem extends BaseItem {
-  itemType: "Polish";
-  type: string;
-  subCategory: string;
-  specification: string;
-  variant?: "One Side" | "Two Side" | null;
-}
-
-type InventoryItem = PipeSheetItem | FittingItem | PolishItem;
+import {
+  BaseItem,
+  FittingItem,
+  InventoryItem,
+  PipeSheetItem,
+  PolishItem,
+} from "@/types/type";
 
 // Constants
 const FITTING_SUBCATEGORIES = [
@@ -180,7 +140,7 @@ export default function ItemsPage() {
       const response = await getItems(filters);
 
       if (response?.data?.success) {
-        const items = response.data.data.map((item: InventoryItem) => ({
+        const items = response.data.data.map((item: any) => ({
           ...item,
           status: getItemStatus(item),
         }));

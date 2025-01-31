@@ -1,13 +1,13 @@
 // components/stats-cards.tsx
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import type { DashboardMetrics } from "@/api/dashboard";
+import type { DashboardMetrics } from "@/types/type";
 
 interface StatsCardProps {
   title: string;
   amount: number;
-  percentageChange: number;
-  todayAmount: string | number;
+  percentageChange: number | string;
+  todayAmount: number;
   isNegative?: boolean;
 }
 
@@ -23,29 +23,43 @@ function StatsCard({
       <CardContent className="p-6">
         <div className="space-y-2">
           <p className="text-base text-gray-500">{title}</p>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <h3 className="text-2xl font-semibold text-gray-900">
-                ₹{amount.toLocaleString()}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-semibold text-gray-900">
+                ₹
+                {Math.abs(amount).toLocaleString("en-IN", {
+                  maximumFractionDigits: 2,
+                  minimumFractionDigits: 2,
+                })}
               </h3>
               <div className="flex items-center text-sm">
-                {isNegative ? (
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                ) : (
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                {percentageChange !== "Infinity" && (
+                  <>
+                    {isNegative ? (
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                    ) : (
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    )}
+                    <span
+                      className={`ml-1 ${
+                        isNegative ? "text-red-500" : "text-green-500"
+                      }`}
+                    >
+                      {typeof percentageChange === "number"
+                        ? `${Math.abs(percentageChange).toFixed(1)}%`
+                        : percentageChange}
+                    </span>
+                  </>
                 )}
-                <span
-                  className={`ml-1 ${
-                    isNegative ? "text-red-500" : "text-green-500"
-                  }`}
-                >
-                  {Math.abs(percentageChange)}%
-                </span>
               </div>
             </div>
-            <span className="text-sm text-gray-500 mt-1">
+            <span className="text-sm text-gray-500">
               {isNegative ? "-" : "+"}
-              {todayAmount} today
+              {Math.abs(todayAmount).toLocaleString("en-IN", {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2,
+              })}{" "}
+              today
             </span>
           </div>
         </div>
@@ -56,31 +70,25 @@ function StatsCard({
 
 export function StatsCards({ metrics }: { metrics: DashboardMetrics }) {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 grid-cols-3">
       <StatsCard
-        title="Gross Sales"
-        amount={metrics.grossSales.total}
-        percentageChange={metrics.grossSales.percentageChange}
-        todayAmount={metrics.grossSales.todayAmount.toLocaleString()}
+        title="Total Sales"
+        amount={metrics.totalSales.total}
+        percentageChange={metrics.totalSales.percentageChange}
+        todayAmount={metrics.totalSales.todayAmount}
       />
       <StatsCard
-        title="Average Sales"
-        amount={metrics.averageSales.total}
-        percentageChange={metrics.averageSales.percentageChange}
-        todayAmount={metrics.averageSales.todayAmount.toLocaleString()}
-      />
-      <StatsCard
-        title="New Sales"
-        amount={metrics.newSales.total}
-        percentageChange={metrics.newSales.percentageChange}
-        todayAmount={metrics.newSales.todayAmount.toLocaleString()}
-        isNegative={metrics.newSales.percentageChange < 0}
+        title="Total Purchase"
+        amount={metrics.totalPurchase.total}
+        percentageChange={metrics.totalPurchase.percentageChange}
+        todayAmount={metrics.totalPurchase.todayAmount}
       />
       <StatsCard
         title="Gross Profits"
         amount={metrics.grossProfits.total}
         percentageChange={metrics.grossProfits.percentageChange}
-        todayAmount={metrics.grossProfits.todayAmount.toLocaleString()}
+        todayAmount={metrics.grossProfits.todayAmount}
+        isNegative={metrics.grossProfits.total < 0}
       />
     </div>
   );
