@@ -284,7 +284,7 @@ export default function ItemForm({
             onChange={(e) =>
               setFormData({ ...formData, currentStock: Number(e.target.value) })
             }
-            required
+            // required
           />
         </div>
         <div className="space-y-2">
@@ -295,7 +295,7 @@ export default function ItemForm({
             onChange={(e) =>
               setFormData({ ...formData, minimumStock: Number(e.target.value) })
             }
-            required
+            // required
           />
         </div>
         <div className="space-y-2">
@@ -306,7 +306,7 @@ export default function ItemForm({
             onChange={(e) =>
               setFormData({ ...formData, purchaseRate: Number(e.target.value) })
             }
-            required
+            // required
           />
         </div>
         <div className="space-y-2">
@@ -322,7 +322,7 @@ export default function ItemForm({
                 sellingRate: Number(e.target.value),
               })
             }
-            required
+            // required
           />
         </div>
       </div>

@@ -58,6 +58,8 @@ interface PipeSheetItem extends BaseItem {
 
 interface FittingItem extends BaseItem {
   itemType: "Fitting";
+  grade: "304" | "202"; // Add grade
+  category: string;
   subCategory: string;
   size: string;
   type: "Round" | "Square";
@@ -203,8 +205,8 @@ export default function ItemsPage() {
         value={selectedGrade || undefined}
         onValueChange={setSelectedGrade}
       >
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Filter by grade" />
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Filter by Grade" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Grades</SelectItem>
@@ -339,13 +341,19 @@ export default function ItemsPage() {
               Name
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-              Category
+              Grade
+            </th>
+            <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+              Type
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Size
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-              Type
+              Sub Category
+            </th>
+            <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+              Category
             </th>
             <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
               Stock
@@ -368,11 +376,13 @@ export default function ItemsPage() {
               className="border-b transition-colors hover:bg-muted/50"
             >
               <td className="p-4 align-middle">{item.name}</td>
+              <td className="p-4 align-middle">{item.grade}</td>
               <td className="p-4 align-middle">
                 {item?.type?.replace(/_/g, " ")}
               </td>
               <td className="p-4 align-middle">{item.size}</td>
-              <td className="p-4 align-middle">{item.type}</td>
+              <td className="p-4 align-middle">{item.subCategory}</td>
+              <td className="p-4 align-middle">{item.category}</td>
               <td className="p-4 align-middle text-right">
                 {Number(item.currentStock)
                   .toFixed(2)
@@ -418,7 +428,7 @@ export default function ItemsPage() {
               Name
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-              Type
+              Sub Category
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Specification
@@ -485,22 +495,20 @@ export default function ItemsPage() {
       selectedType === "fittings"
         ? FITTING_SUBCATEGORIES
         : POLISH_SUBCATEGORIES;
-    const placeholder = `Filter ${
-      selectedType === "fittings" ? "fitting" : "polish"
-    } categories`;
+    const placeholder = `Filter By Sub Categories`;
 
     return (
       <Select
         value={selectedSubCategory}
         onValueChange={setSelectedSubCategory}
       >
-        <SelectTrigger className="w-[200px]">
+        <SelectTrigger className="w-full capitalize">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
+          <SelectItem value="all">All Sub Categories</SelectItem>
           {subcategories.map((category) => (
-            <SelectItem key={category} value={category}>
+            <SelectItem key={category} value={category} className="capitalize">
               {category.replace(/_/g, " ")}
             </SelectItem>
           ))}
@@ -649,20 +657,21 @@ export default function ItemsPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex gap-4">
-            <div className="flex-1">
+            <div className="flex-1 w-2/3">
               <Input
                 placeholder="Search items..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
               />
             </div>
-            {(selectedType === "pipes" || selectedType === "sheets") && (
-              <GradeFilter />
-            )}
-            {(selectedType === "fittings" || selectedType === "polish") && (
-              <SubCategoryFilter />
-            )}
+            <div className="w-1/3 ">
+              {(selectedType === "pipes" || selectedType === "sheets") && (
+                <GradeFilter />
+              )}
+              {(selectedType === "fittings" || selectedType === "polish") && (
+                <SubCategoryFilter />
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
