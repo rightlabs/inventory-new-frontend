@@ -27,13 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Edit2, Package } from "lucide-react";
 import toast from "react-hot-toast";
-import {
-  getItems,
-  createItem,
-  updateItem,
-  ItemType,
-  ItemFilters,
-} from "@/api/items";
+import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
 import {
   BaseItem,
