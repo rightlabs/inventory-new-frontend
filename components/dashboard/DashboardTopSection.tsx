@@ -3,15 +3,9 @@ import { useUser } from "@/contexts/userContext";
 import React from "react";
 import { ChevronDown } from "lucide-react"; // Import ChevronDown icon if you're using lucide-react
 
-interface DashboardTopSectionProps {
-  period: string;
-  onPeriodChange: (period: string) => void;
-}
+interface DashboardTopSectionProps {}
 
-const DashboardTopSection = ({
-  period,
-  onPeriodChange,
-}: DashboardTopSectionProps) => {
+const DashboardTopSection = ({}: DashboardTopSectionProps) => {
   const { user } = useUser();
 
   const periods = [

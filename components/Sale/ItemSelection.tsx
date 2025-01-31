@@ -9,9 +9,9 @@ import {
 import { Input } from "@/components/ui/input";
 
 // Type guard functions
-const isPipeSheet = (item) => item.itemType === "PipeSheet";
-const isFitting = (item) => item.itemType === "Fitting";
-const isPolish = (item) => item.itemType === "Polish";
+const isPipeSheet = (item: any) => item.itemType === "PipeSheet";
+const isFitting = (item: any) => item.itemType === "Fitting";
+const isPolish = (item: any) => item.itemType === "Polish";
 
 export default function ItemSelection({
   item,
@@ -19,15 +19,15 @@ export default function ItemSelection({
   items,
   onItemChange,
   quantityErrors,
-}) {
+}: any) {
   // Get filtered options for a specific field based on current selections
-  const getFilteredOptions = (field) => {
+  const getFilteredOptions = (field: any) => {
     // Start with all items
     let filteredItems = items;
 
     // Apply type-specific filters
     if (item.type) {
-      filteredItems = items.filter((i) => {
+      filteredItems = items.filter((i: any) => {
         if (item.type === "pipe" || item.type === "sheet") {
           return isPipeSheet(i) && i.type === item.type;
         }
@@ -43,24 +43,24 @@ export default function ItemSelection({
 
     // Apply grade filter if selected
     if (item.grade) {
-      filteredItems = filteredItems.filter((i) => i.grade === item.grade);
+      filteredItems = filteredItems.filter((i: any) => i.grade === item.grade);
     }
 
     // Apply size filter if selected
     if (item.size) {
-      filteredItems = filteredItems.filter((i) => i.size === item.size);
+      filteredItems = filteredItems.filter((i: any) => i.size === item.size);
     }
 
     // Apply subcategory filter if selected
     if (item.subCategory) {
       filteredItems = filteredItems.filter(
-        (i) => i.subCategory === item.subCategory
+        (i: any) => i.subCategory === item.subCategory
       );
     }
 
     // Get unique values for the requested field
     const values = new Set();
-    filteredItems.forEach((i) => {
+    filteredItems.forEach((i: any) => {
       const value = i[field];
       if (value) values.add(value);
     });
@@ -72,7 +72,7 @@ export default function ItemSelection({
   const availableProducts = useMemo(() => {
     if (!item.type) return [];
 
-    return items.filter((i) => {
+    return items.filter((i: any) => {
       if (item.type === "pipe" || item.type === "sheet") {
         return (
           isPipeSheet(i) &&
@@ -124,7 +124,7 @@ export default function ItemSelection({
             <SelectValue placeholder="Select grade" />
           </SelectTrigger>
           <SelectContent>
-            {getFilteredOptions("grade").map((grade) => (
+            {getFilteredOptions("grade").map((grade: any) => (
               <SelectItem key={grade} value={grade}>
                 {grade}
               </SelectItem>
@@ -151,7 +151,7 @@ export default function ItemSelection({
               <SelectValue placeholder="Select size" />
             </SelectTrigger>
             <SelectContent>
-              {getFilteredOptions("size").map((size) => (
+              {getFilteredOptions("size").map((size: any) => (
                 <SelectItem key={size} value={size}>
                   {size}
                 </SelectItem>
@@ -178,7 +178,7 @@ export default function ItemSelection({
               <SelectValue placeholder="Select gauge" />
             </SelectTrigger>
             <SelectContent>
-              {getFilteredOptions("gauge").map((gauge) => (
+              {getFilteredOptions("gauge").map((gauge: any) => (
                 <SelectItem key={gauge} value={gauge}>
                   {gauge}
                 </SelectItem>
@@ -210,7 +210,7 @@ export default function ItemSelection({
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
-            {getFilteredOptions("subCategory").map((category) => (
+            {getFilteredOptions("subCategory").map((category: any) => (
               <SelectItem key={category} value={category}>
                 {category.replace(/_/g, " ")}
               </SelectItem>
@@ -237,7 +237,7 @@ export default function ItemSelection({
               <SelectValue placeholder="Select grade" />
             </SelectTrigger>
             <SelectContent>
-              {getFilteredOptions("grade").map((grade) => (
+              {getFilteredOptions("grade").map((grade: any) => (
                 <SelectItem key={grade} value={grade}>
                   {grade}
                 </SelectItem>
@@ -264,7 +264,7 @@ export default function ItemSelection({
               <SelectValue placeholder="Select size" />
             </SelectTrigger>
             <SelectContent>
-              {getFilteredOptions("size").map((size) => (
+              {getFilteredOptions("size").map((size: any) => (
                 <SelectItem key={size} value={size}>
                   {size}
                 </SelectItem>
@@ -295,7 +295,7 @@ export default function ItemSelection({
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
-            {getFilteredOptions("type").map((type) => (
+            {getFilteredOptions("type").map((type: any) => (
               <SelectItem key={type} value={type}>
                 {type}
               </SelectItem>
@@ -323,7 +323,7 @@ export default function ItemSelection({
               <SelectValue placeholder="Select specification" />
             </SelectTrigger>
             <SelectContent>
-              {getFilteredOptions("specification").map((spec) => (
+              {getFilteredOptions("specification").map((spec: any) => (
                 <SelectItem key={spec} value={spec}>
                   {spec}
                 </SelectItem>
@@ -350,7 +350,7 @@ export default function ItemSelection({
   };
 
   const renderQuantityField = () => {
-    const selectedProduct = items.find((p) => p._id === item.itemId);
+    const selectedProduct = items.find((p: any) => p._id === item.itemId);
     if (!selectedProduct) return null;
 
     if (selectedProduct.unitType === "weight") {
@@ -458,7 +458,7 @@ export default function ItemSelection({
             <Select
               value={item.itemId || ""}
               onValueChange={(value) => {
-                const selectedProduct = items.find((p) => p._id === value);
+                const selectedProduct = items.find((p: any) => p._id === value);
                 if (selectedProduct) {
                   onItemChange(index, {
                     ...item,
@@ -482,7 +482,7 @@ export default function ItemSelection({
                 <SelectValue placeholder="Select product" />
               </SelectTrigger>
               <SelectContent>
-                {availableProducts.map((product) => (
+                {availableProducts.map((product: any) => (
                   <SelectItem key={product._id} value={product._id}>
                     {product.name}
                   </SelectItem>

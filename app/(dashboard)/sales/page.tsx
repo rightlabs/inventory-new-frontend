@@ -10,10 +10,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, FileText, Wallet } from "lucide-react";
+import { Download, Plus, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
-import { getCustomers, Customer } from "@/api/customer";
-import { downloadSaleInvoice, getSales, Sale } from "@/api/sale";
+import { getCustomers } from "@/api/customer";
+import { Customer, Sale } from "@/types/type";
+import { downloadSaleInvoice, getSales } from "@/api/sale";
 import { getItems } from "@/api/items";
 import SaleForm from "@/components/Forms/SaleForm";
 import PaymentModal from "@/components/Forms/PaymentModal";
@@ -54,7 +55,7 @@ export default function SalesPage() {
 
   const fetchItems = async () => {
     try {
-      const response = await getItems();
+      const response: any = await getItems();
       if (response?.data?.statusCode === 200) {
         setItems(response.data.data);
       }

@@ -1,4 +1,3 @@
-// components/dashboard/RevenueSummary.tsx
 import {
   LineChart,
   Line,
@@ -9,8 +8,19 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { MonthlyData } from "@/types/type";
 
-export function RevenueSummary({ data }) {
+interface RevenueSummaryProps {
+  data: MonthlyData[];
+}
+
+interface TooltipFormatterProps {
+  value: number;
+  name: string;
+  entry: MonthlyData;
+}
+
+export function RevenueSummary({ data }: RevenueSummaryProps) {
   // Calculate totals for summary
   const totalRevenue = data.reduce((acc, month) => acc + month.revenue, 0);
   const totalCosts = data.reduce((acc, month) => acc + month.costs, 0);
@@ -30,9 +40,12 @@ export function RevenueSummary({ data }) {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `₹${value / 1000}K`} />
+              <YAxis tickFormatter={(value: number) => `₹${value / 1000}K`} />
               <Tooltip
-                formatter={(value) => [`₹${value.toLocaleString()}`, ""]}
+                formatter={(value: number) => [
+                  `₹${value.toLocaleString()}`,
+                  "",
+                ]}
                 labelStyle={{ color: "#1E293B" }}
               />
               <Legend />

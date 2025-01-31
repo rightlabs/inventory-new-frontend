@@ -1,23 +1,40 @@
 "use client";
 import { getDashboardStats, getInventoryStats } from "@/api/dashboard";
+import {
+  DashboardMetrics,
+  MonthlyData,
+  InventoryStats,
+  ApiResponse,
+} from "@/types/type";
 import DashboardTopSection from "@/components/dashboard/DashboardTopSection";
 import { InventoryStatus } from "@/components/dashboard/InventoryStatus";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { RevenueSummary } from "@/components/dashboard/RevenueSummary";
 import { StatsCards } from "@/components/stats-cards";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 
+export interface DashboardData {
+  metrics: DashboardMetrics;
+  monthlyData: MonthlyData[];
+}
+
+export interface InventoryData {
+  stats: InventoryStats;
+}
+
 export default function DashboardPage() {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [inventoryData, setInventoryData] = useState(null);
-  const [period, setPeriod] = useState("week");
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const [inventoryData, setInventoryData] = useState<InventoryData | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [dashboardRes, inventoryRes] = await Promise.all([
-          getDashboardStats(period),
+          getDashboardStats(),
           getInventoryStats(),
         ]);
         setDashboardData(dashboardRes.data);
@@ -28,7 +45,7 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [period]);
+  }, []);
 
   if (!dashboardData || !inventoryData)
     return (
@@ -39,7 +56,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 space-y-6 ">
-      <DashboardTopSection period={period} onPeriodChange={setPeriod} />
+      <DashboardTopSection />
 
       {/* First Row - Stats Cards */}
       <StatsCards metrics={dashboardData.metrics} />

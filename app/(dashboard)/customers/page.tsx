@@ -13,7 +13,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Download, Plus, FileText } from "lucide-react";
-import { getCustomers, Customer, getCustomerTotalSales } from "@/api/customer";
+import { getCustomers, getCustomerTotalSales } from "@/api/customer";
+import { Customer } from "@/types/type";
 import CustomerForm from "@/components/Forms/CustomerForm";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import { getCustomerLedger } from "@/api/customer";
@@ -31,14 +32,14 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     try {
       setIsLoading(true);
-      const [customersResponse, ...totalSalesResponses] = await Promise.all([
+      const [customersResponse] = await Promise.all([
         getCustomers(),
         ...customers.map((customer) => getCustomerTotalSales(customer._id)),
       ]);
 
       if (customersResponse?.data?.statusCode === 200) {
         const customersWithTotalSales = await Promise.all(
-          customersResponse.data.data.map(async (customer, index) => {
+          customersResponse.data.data.map(async (customer: Customer) => {
             const totalSalesResponse = await getCustomerTotalSales(
               customer._id
             );

@@ -1,7 +1,7 @@
 // components/stats-cards.tsx
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import type { DashboardMetrics } from "@/api/dashboard";
+import type { DashboardMetrics } from "@/types/type";
 
 interface StatsCardProps {
   title: string;

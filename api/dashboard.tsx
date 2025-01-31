@@ -1,91 +1,13 @@
+import { DashboardMetrics, InventoryStats } from "@/types/type";
 import API_INSTANCE from "./index";
-
-export interface DashboardMetrics {
-  grossSales: {
-    total: number;
-    percentageChange: number;
-    todayAmount: number;
-  };
-  averageSales: {
-    total: number;
-    percentageChange: number;
-    todayAmount: number;
-  };
-  newSales: {
-    total: number;
-    percentageChange: number;
-    todayAmount: number;
-  };
-  grossProfits: {
-    total: number;
-    percentageChange: number;
-    todayAmount: number;
-  };
-}
-
-export interface RecentSale {
-  name: string;
-  email: string;
-  amount: string;
-  status: "pending" | "delivered" | "processing";
-}
-
-export interface MonthlyData {
-  month: string;
-  revenue: number;
-  costs: number;
-}
-
-export interface DashboardStats {
-  metrics: DashboardMetrics;
-  recentSales: RecentSale[];
-  monthlyData: MonthlyData[];
-}
-
-export interface InventoryCategory {
-  _id: string;
-  totalValue: number;
-  itemCount: number;
-}
-
-export interface TopItem {
-  _id: string;
-  name: string;
-  itemType: string;
-  currentStock: number;
-  purchaseRate: number;
-  code: string;
-}
-
-export interface InventoryTransaction {
-  _id: string;
-  item: {
-    _id: string;
-    name: string;
-  };
-  type: "in" | "out";
-  quantity: number;
-  documentRef: "Purchase" | "Sale";
-  documentNumber: string;
-  date: string;
-}
-
-export interface InventoryStats {
-  stats: {
-    totalItems: number;
-    lowStockItems: number;
-    valueByCategory: InventoryCategory[];
-    topItems: TopItem[];
-  };
-  recentTransactions: InventoryTransaction[];
-}
+import { DashboardData, InventoryData } from "@/app/(dashboard)/dashboard/page";
 
 export const getDashboardStats = async (
   period?: "day" | "week" | "month" | "year"
 ) => {
   try {
     const queryParams = period ? `?period=${period}` : "";
-    const res = await API_INSTANCE.get<{ data: DashboardStats }>(
+    const res = await API_INSTANCE.get<{ data: DashboardData }>(
       `/dashboard/stats${queryParams}`
     );
     return res.data;
@@ -99,7 +21,7 @@ export const getDashboardStats = async (
 
 export const getInventoryStats = async () => {
   try {
-    const res = await API_INSTANCE.get<{ data: InventoryStats }>(
+    const res = await API_INSTANCE.get<{ data: InventoryData }>(
       "/dashboard/inventory"
     );
     return res.data;

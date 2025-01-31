@@ -24,31 +24,21 @@ import CustomerForm from "./CustomerForm";
 import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
 import ItemSelection from "../Sale/ItemSelection";
+import { Customer, InventoryItem, SaleItem } from "@/types/type";
 
-interface Customer {
-  _id: string;
-  name: string;
-  creditLimit: number;
-  currentBalance: number;
+interface QuantityError {
+  hasError: boolean;
+  message: string;
 }
 
-interface SaleItem {
-  type: string;
-  itemId: string;
-  name: string;
-  grade?: string;
-  size?: string;
-  gauge?: string;
-  subCategory?: string;
-  specification?: string;
-  quantity?: number;
-  weight?: number;
-  rate: number;
-  margin: number;
-  sellingPrice: number;
-  amount: number;
-  gst: number;
-  gstAmount: number;
+interface SalesFormProps {
+  customers: Customer[];
+  items: InventoryItem[];
+  isLoading: boolean;
+  onSuccess?: () => void;
+  fetchCustomers: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 interface FormData {
@@ -60,20 +50,6 @@ interface FormData {
   amountPaid: number;
   paymentMode: "cash" | "cheque" | "online";
   paymentReference: string;
-}
-
-interface SalesFormProps {
-  customers: Customer[];
-  items: any[];
-  isLoading: boolean;
-  onSuccess?: () => void;
-  fetchCustomers: () => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-interface QuantityError {
-  hasError: boolean;
-  message: string;
 }
 
 export default function SalesForm({
@@ -95,7 +71,6 @@ export default function SalesForm({
   const [quantityErrors, setQuantityErrors] = useState<{
     [key: number]: QuantityError;
   }>({});
-
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
     date: new Date(),
@@ -318,7 +293,7 @@ export default function SalesForm({
     };
   };
 
-  const getItemModel = (type) => {
+  const getItemModel = (type: any) => {
     switch (type) {
       case "pipe":
       case "sheet":

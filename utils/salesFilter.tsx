@@ -1,5 +1,5 @@
 // utils/saleFilters.ts
-import { Sale } from "@/api/sale";
+import { Sale } from "@/types/type";
 
 export interface SaleFilters {
   page?: number;

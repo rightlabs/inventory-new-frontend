@@ -1,24 +1,6 @@
 // api/customer.ts
 import API_INSTANCE from "./index";
 
-export interface Customer {
-  _id: string;
-  id: string;
-  name: string;
-  type: "retail" | "wholesale" | "distributor";
-  gstin?: string;
-  contactPerson: string;
-  phone: string;
-  email?: string;
-  address: string;
-  creditLimit: number;
-  currentBalance: number;
-  status: "active" | "inactive";
-  paymentTerms?: string;
-  totalSales: number;
-  lastPurchaseDate?: string;
-}
-
 export const getCustomers = async () => {
   try {
     const res = await API_INSTANCE.get("/customer");

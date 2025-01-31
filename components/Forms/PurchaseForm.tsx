@@ -436,7 +436,7 @@ const PurchaseModal = ({
         { name: "invoiceNo", label: "Invoice No" },
       ];
       const missingFields = requiredFields.filter(
-        (field) => !formData[field.name]
+        (field) => !formData[field.name as keyof PurchaseFormData]
       );
       if (missingFields.length > 0) {
         toast.error(

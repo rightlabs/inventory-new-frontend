@@ -1,5 +1,10 @@
-// components/dashboard/InventoryStatus.tsx
-export function InventoryStatus({ stats }) {
+import { InventoryStats } from "@/types/type";
+
+interface InventoryStatusProps {
+  stats: InventoryStats;
+}
+
+export function InventoryStatus({ stats }: InventoryStatusProps) {
   return (
     <div className="flex w-full justify-between gap-5">
       <div className="bg-[#F3E8FF] rounded-lg p-4 w-1/3">

@@ -45,6 +45,7 @@ interface PaymentFormData {
   mode: "cash" | "cheque" | "online";
   reference: string;
   notes?: string;
+  balance: number;
 }
 
 export default function PaymentModal({
@@ -54,7 +55,7 @@ export default function PaymentModal({
   purchase,
   onSuccess,
 }: PaymentModalProps) {
-  const [formData, setFormData] = useState<PaymentFormData>({
+  const [formData, setFormData] = useState<PaymentFormData | any>({
     amount: "",
     mode: "cash",
     reference: "",
@@ -67,11 +68,11 @@ export default function PaymentModal({
 
   const handleFullAmount = () => {
     if (document) {
-      setFormData((prev) => ({
+      setFormData((prev: PaymentFormData) => ({
         ...prev,
-        amount:
-          Math.floor(document.balanceAmount * 1000) /
-          (1000).toFixed(3).replace(/[.,]00$/, ""),
+        amount: (Math.floor(document.balanceAmount * 1000) / 1000)
+          .toFixed(3)
+          .replace(/[.,]00$/, ""),
       }));
     }
   };
@@ -164,7 +165,10 @@ export default function PaymentModal({
             max={document.balanceAmount}
             value={formData.amount}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, amount: e.target.value }))
+              setFormData((prev: PaymentFormData) => ({
+                ...prev,
+                amount: e.target.value,
+              }))
             }
           />
         </div>
@@ -176,7 +180,7 @@ export default function PaymentModal({
           <Select
             value={formData.mode}
             onValueChange={(value: "cash" | "cheque" | "online") =>
-              setFormData((prev) => ({ ...prev, mode: value }))
+              setFormData((prev: PaymentFormData) => ({ ...prev, mode: value }))
             }
           >
             <SelectTrigger>
@@ -198,7 +202,10 @@ export default function PaymentModal({
             <Input
               value={formData.reference}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, reference: e.target.value }))
+                setFormData((prev: PaymentFormData) => ({
+                  ...prev,
+                  reference: e.target.value,
+                }))
               }
             />
           </div>
@@ -209,7 +216,10 @@ export default function PaymentModal({
           <Input
             value={formData.notes}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, notes: e.target.value }))
+              setFormData((prev: PaymentFormData) => ({
+                ...prev,
+                notes: e.target.value,
+              }))
             }
           />
         </div>
