@@ -1,31 +1,29 @@
-// api/sale.ts
 import API_INSTANCE from "./index";
+
 export interface SaleItem {
+  item: string;
   name: string;
   type: "pipe" | "sheet" | "fitting" | "polish";
-  size?: string;
-  gauge?: string;
-  category?: string;
-  subCategory?: string;
-  pieces?: number;
+  quantity?: number;
   weight?: number;
   rate: number;
+  margin: number;
+  sellingPrice: number;
   amount: number;
   gst: number;
   gstAmount: number;
 }
 
-export interface SaleFormData {
+export interface Sale {
   customerId: string;
   date: Date;
-  items: SaleItem[];
-  paymentTerms?: string;
   deliveryAddress?: string;
   vehicleNo?: string;
+  items: SaleItem[];
   discount: number;
   taxableAmount: number;
-  discountAmount: number;
   totalTax: number;
+  discountAmount: number;
   grandTotal: number;
   payments?: {
     amount: number;
@@ -33,10 +31,9 @@ export interface SaleFormData {
     reference?: string;
     date: Date;
   }[];
-  balanceAmount: number;
 }
 
-export interface Sale {
+export interface SaleResponse {
   _id: string;
   saleNumber: string;
   date: string;
@@ -44,7 +41,6 @@ export interface Sale {
     _id: string;
     name: string;
     gstin: string;
-    type: string;
   };
   itemCount: number;
   totalAmount: number;
@@ -52,21 +48,11 @@ export interface Sale {
   gstAmount: number;
   grandTotal: number;
   balanceAmount: number;
-  status: "draft" | "processing" | "completed" | "cancelled";
-  paymentStatus: "pending" | "partial" | "paid";
+  status: "draft" | "processing" | "completed";
+  paymentStatus: "unpaid" | "partial" | "paid";
 }
 
-interface SaleFilters {
-  page?: number;
-  limit?: number;
-  status?: string;
-  paymentStatus?: string;
-  startDate?: string;
-  endDate?: string;
-  customerId?: string;
-}
-
-export const createSale = async (data: SaleFormData) => {
+export const createSale = async (data: Sale) => {
   try {
     const res = await API_INSTANCE.post("/sale", data);
     return res;
@@ -78,7 +64,15 @@ export const createSale = async (data: SaleFormData) => {
   }
 };
 
-export const getSales = async (filters?: SaleFilters) => {
+export const getSales = async (filters?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  paymentStatus?: string;
+  startDate?: string;
+  endDate?: string;
+  customerId?: string;
+}) => {
   try {
     const queryParams = new URLSearchParams();
     if (filters) {
@@ -97,6 +91,18 @@ export const getSales = async (filters?: SaleFilters) => {
   }
 };
 
+export const getSaleDetails = async (saleId: string) => {
+  try {
+    const res = await API_INSTANCE.get(`/sale/${saleId}`);
+    return res;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error("Failed to fetch sale details");
+  }
+};
+
 export const addSalePayment = async (
   saleId: string,
   data: {
@@ -111,21 +117,5 @@ export const addSalePayment = async (
     return res;
   } catch (error) {
     throw error;
-  }
-};
-
-// Add to the existing api/sale.ts file
-
-export const downloadSaleInvoice = async (saleId: string) => {
-  try {
-    const response = await API_INSTANCE.get(`/sale/${saleId}/invoice`, {
-      responseType: "blob", // Important for handling PDF data
-    });
-    return response;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error("Failed to download invoice");
   }
 };
