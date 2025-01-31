@@ -71,6 +71,10 @@ interface SalesFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+interface QuantityError {
+  hasError: boolean;
+  message: string;
+}
 
 export default function SalesForm({
   customers,
@@ -88,6 +92,9 @@ export default function SalesForm({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
+  const [quantityErrors, setQuantityErrors] = useState<{
+    [key: number]: QuantityError;
+  }>({});
 
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
@@ -149,6 +156,7 @@ export default function SalesForm({
   const handleItemChange = (index: number, updatedItem: Partial<SaleItem>) => {
     const newItems = [...selectedItems];
     const currentItem = { ...newItems[index] };
+    const newQuantityErrors = { ...quantityErrors };
 
     // Update the item with new values
     Object.assign(currentItem, updatedItem);
@@ -163,8 +171,9 @@ export default function SalesForm({
         currentItem.name = selectedProduct.name;
         currentItem.gst = selectedProduct.gst;
         currentItem.rate = selectedProduct.purchaseRate || 0;
-        currentItem.margin = 0; // Reset margin when product changes
+        currentItem.margin = 0;
         currentItem.sellingPrice = selectedProduct.purchaseRate || 0;
+        currentItem.type = selectedProduct.itemType;
 
         // Reset quantity/weight based on unit type
         if (selectedProduct.unitType === "weight") {
@@ -175,13 +184,42 @@ export default function SalesForm({
           currentItem.weight = undefined;
         }
 
-        // Set initial amount and GST
+        // Check available stock for initial quantity
+        const isValid = checkStockAvailability(selectedProduct, currentItem);
+        if (!isValid.valid) {
+          newQuantityErrors[index] = {
+            hasError: true,
+            message: isValid.message,
+          };
+        } else {
+          delete newQuantityErrors[index];
+        }
+
+        // Calculate initial amount based on unit type
         const quantity =
           selectedProduct.unitType === "weight"
-            ? currentItem.weight
-            : currentItem.quantity;
-        currentItem.amount = quantity * currentItem.rate;
+            ? currentItem.weight || 0
+            : currentItem.quantity || 0;
+        currentItem.amount = quantity * currentItem.sellingPrice;
         currentItem.gstAmount = (currentItem.amount * currentItem.gst) / 100;
+      }
+    }
+
+    // If quantity or weight changed, validate stock
+    if ("quantity" in updatedItem || "weight" in updatedItem) {
+      const selectedProduct = items.find(
+        (item) => item._id === currentItem.itemId
+      );
+      if (selectedProduct) {
+        const isValid = checkStockAvailability(selectedProduct, currentItem);
+        if (!isValid.valid) {
+          newQuantityErrors[index] = {
+            hasError: true,
+            message: isValid.message,
+          };
+        } else {
+          delete newQuantityErrors[index];
+        }
       }
     }
 
@@ -196,40 +234,80 @@ export default function SalesForm({
         (item) => item._id === currentItem.itemId
       );
       if (selectedProduct) {
-        // Calculate selling price
-        currentItem.sellingPrice =
-          currentItem.rate * (1 + currentItem.margin / 100);
+        currentItem.sellingPrice = Math.min(
+          999999.99,
+          Math.max(
+            0,
+            parseFloat(
+              (
+                currentItem.rate *
+                (1 + (currentItem.margin || 0) / 100)
+              ).toFixed(2)
+            )
+          )
+        );
 
-        // Calculate amount based on unit type
-        if (selectedProduct.unitType === "weight") {
-          currentItem.amount =
-            (currentItem.weight || 0) * currentItem.sellingPrice;
-        } else {
-          currentItem.amount =
-            (currentItem.quantity || 0) * currentItem.sellingPrice;
-        }
+        const quantity =
+          selectedProduct.unitType === "weight"
+            ? currentItem.weight || 0
+            : currentItem.quantity || 0;
 
-        // Calculate GST amount
+        currentItem.amount = Math.min(
+          999999.99,
+          Math.max(
+            0,
+            parseFloat((quantity * currentItem.sellingPrice).toFixed(2))
+          )
+        );
         currentItem.gstAmount = (currentItem.amount * currentItem.gst) / 100;
       }
     }
 
     newItems[index] = currentItem as SaleItem;
     setSelectedItems(newItems);
+    setQuantityErrors(newQuantityErrors);
+  };
+
+  const checkStockAvailability = (product: any, item: Partial<SaleItem>) => {
+    if (product.unitType === "weight") {
+      if ((item.weight || 0) > product.currentStock) {
+        return {
+          valid: false,
+          message: `Only ${product.currentStock}kg available in stock`,
+        };
+      }
+    } else {
+      if ((item.quantity || 0) > product.currentStock) {
+        return {
+          valid: false,
+          message: `Only ${product.currentStock} pieces available in stock`,
+        };
+      }
+    }
+    return { valid: true, message: "" };
   };
 
   const calculateTotals = () => {
+    // Calculate subtotal from all items, ensuring to handle undefined values
     const subtotal = selectedItems.reduce(
       (sum, item) => sum + (item.amount || 0),
       0
     );
+
+    // Calculate total tax from all items
     const totalTax = selectedItems.reduce(
       (sum, item) => sum + (item.gstAmount || 0),
       0
     );
-    const discountAmount = (subtotal * Number(formData.discount)) / 100;
+
+    // Calculate discount amount
+    const discountAmount = (subtotal * Number(formData.discount || 0)) / 100;
+
+    // Calculate grand total
     const grandTotal = subtotal + totalTax - discountAmount;
-    const balance = grandTotal - Number(formData.amountPaid);
+
+    // Calculate balance after payment
+    const balance = grandTotal - Number(formData.amountPaid || 0);
 
     return {
       subtotal,
@@ -240,14 +318,32 @@ export default function SalesForm({
     };
   };
 
+  const getItemModel = (type) => {
+    switch (type) {
+      case "pipe":
+      case "sheet":
+        return "PipeSheet";
+      case "fitting":
+        return "Fitting";
+      case "polish":
+        return "Polish";
+      default:
+        throw new Error(`Invalid item type: ${type}`);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
-      if (
-        !formData.customerId ||
-        !formData.date ||
-        selectedItems.length === 0
-      ) {
-        toast.error("Please fill in all required fields");
+      const missingFields = [];
+      if (!formData.customerId) missingFields.push("customer");
+      if (!formData.date) missingFields.push("date");
+      if (selectedItems.length === 0) missingFields.push("items");
+      if (missingFields.length > 0) {
+        toast.error(
+          `Please fill in the following required field${
+            missingFields.length > 1 ? "s" : ""
+          }: ${missingFields.join(", ")}`
+        );
         return;
       }
 
@@ -268,7 +364,8 @@ export default function SalesForm({
         deliveryAddress: formData.deliveryAddress,
         vehicleNo: formData.vehicleNo,
         items: selectedItems.map((item) => ({
-          item: item.itemId,
+          itemId: item.itemId,
+          itemModel: getItemModel(item.type),
           name: item.name,
           type: item.type,
           quantity: item.quantity,
@@ -327,7 +424,7 @@ export default function SalesForm({
   };
 
   return (
-    <DialogContent className="sm:max-w-[900px]">
+    <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Create New Sale</DialogTitle>
       </DialogHeader>
@@ -465,6 +562,7 @@ export default function SalesForm({
                 index={index}
                 items={items}
                 onItemChange={handleItemChange}
+                quantityErrors={quantityErrors}
               />
 
               {item.itemId && (
@@ -652,7 +750,10 @@ export default function SalesForm({
         <Button variant="outline" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={isLoading}>
+        <Button
+          onClick={handleSubmit}
+          disabled={isLoading || Object.keys(quantityErrors).length > 0}
+        >
           Create Sale
         </Button>
       </div>

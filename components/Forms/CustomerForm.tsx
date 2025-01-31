@@ -1,15 +1,7 @@
-// components/Forms/CustomerForm.tsx
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { addCustomer } from "@/api/customer";
@@ -21,18 +13,16 @@ interface CustomerFormProps {
 
 interface CustomerFormData {
   businessName: string;
-  type: "retail" | "wholesale" | "distributor";
-  gstin?: string;
+  gstin: string;
   contactPerson: string;
   phone: string;
-  email?: string;
+  email: string;
   addressLine1: string;
-  addressLine2?: string;
-  city?: string;
+  addressLine2: string;
+  city: string;
   pincode: string;
   creditLimit: number;
-  currentBalance?: number;
-  paymentTerms?: string;
+  currentBalance: number;
 }
 
 export default function CustomerForm({
@@ -44,14 +34,9 @@ export default function CustomerForm({
     handleSubmit,
     reset,
     formState: { errors },
-    setValue,
-    watch,
   } = useForm<CustomerFormData>();
 
   const onSubmit = async (data: CustomerFormData) => {
-    console.log("====================================");
-    console.log(data, "customer data");
-    console.log("====================================");
     try {
       const res = await addCustomer(data);
 
@@ -92,42 +77,18 @@ export default function CustomerForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">
-                Customer Type*
-              </label>
-              <Select
-                onValueChange={(value) =>
-                  setValue("type", value as CustomerFormData["type"])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="retail">Retail</SelectItem>
-                  <SelectItem value="wholesale">Wholesale</SelectItem>
-                  <SelectItem value="distributor">Distributor</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.type && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.type.message}
-                </p>
-              )}
-            </div>
-
-            <div>
               <label className="text-sm font-medium mb-1 block">GSTIN</label>
               <Input
-                {...register("gstin", {
-                  pattern: {
-                    value:
-                      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                    message: "Invalid GSTIN format",
-                  },
-                })}
-                placeholder="Enter GSTIN (if applicable)"
-                className={errors.gstin ? "border-red-500" : ""}
+                // {...register("gstin", {
+                //   required: "GSTIN is required",
+                //   pattern: {
+                //     value:
+                //       /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                //     message: "Invalid GSTIN format",
+                //   },
+                // })}
+                placeholder="Enter GSTIN"
+                // className={errors.gstin ? "border-red-500" : ""}
               />
               {errors.gstin && (
                 <p className="text-red-500 text-xs mt-1">
@@ -135,12 +96,7 @@ export default function CustomerForm({
                 </p>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Contact Information */}
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">
                 Contact Person*
@@ -155,6 +111,31 @@ export default function CustomerForm({
               {errors.contactPerson && (
                 <p className="text-red-500 text-xs mt-1">
                   {errors.contactPerson.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Email</label>
+              <Input
+                {...register("email", {
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Invalid email format",
+                  },
+                })}
+                type="email"
+                placeholder="Enter email"
+                className={errors.email ? "border-red-500" : ""}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.email.message}
                 </p>
               )}
             </div>
@@ -182,29 +163,7 @@ export default function CustomerForm({
             </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Email</label>
-            <Input
-              {...register("email", {
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "Invalid email format",
-                },
-              })}
-              type="email"
-              placeholder="Enter email"
-              className={errors.email ? "border-red-500" : ""}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Address Fields */}
-        <div className="grid gap-4">
+          {/* Address Fields */}
           <div>
             <label className="text-sm font-medium mb-1 block">
               Address Line 1*
@@ -295,37 +254,28 @@ export default function CustomerForm({
               <Input
                 {...register("currentBalance", {
                   valueAsNumber: true,
+                  min: {
+                    value: 0,
+                    message: "Opening balance cannot be negative",
+                  },
                 })}
                 type="number"
                 placeholder="Enter opening balance"
+                className={errors.currentBalance ? "border-red-500" : ""}
               />
+              {errors.currentBalance && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.currentBalance.message}
+                </p>
+              )}
             </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">
-              Payment Terms
-            </label>
-            <Select onValueChange={(value) => setValue("paymentTerms", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select payment terms" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="immediate">Immediate</SelectItem>
-                <SelectItem value="net15">Net 15</SelectItem>
-                <SelectItem value="net30">Net 30</SelectItem>
-                <SelectItem value="net45">Net 45</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {errors.gstin
-              ? "Please verify the GSTIN number before adding the customer."
-              : "Make sure to verify customer details before adding them to the system."}
+            Make sure to verify the GSTIN number before adding the customer.
           </AlertDescription>
         </Alert>
       </div>

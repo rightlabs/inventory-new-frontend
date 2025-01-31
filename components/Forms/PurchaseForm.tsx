@@ -430,8 +430,20 @@ const PurchaseModal = ({
 
   const handleSubmit = async () => {
     try {
-      if (!formData.vendorId || !formData.date || !formData.invoiceNo) {
-        toast.error("Please fill in all required fields");
+      const requiredFields = [
+        { name: "vendorId", label: "Vendor" },
+        { name: "date", label: "Date" },
+        { name: "invoiceNo", label: "Invoice No" },
+      ];
+      const missingFields = requiredFields.filter(
+        (field) => !formData[field.name]
+      );
+      if (missingFields.length > 0) {
+        toast.error(
+          `Please fill in the following required field${
+            missingFields.length > 1 ? "s" : ""
+          }: ${missingFields.map((field) => field.label).join(", ")}`
+        );
         return;
       }
 

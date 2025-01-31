@@ -85,7 +85,7 @@ export default function CustomersPage() {
       <span
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[type]}`}
       >
-        {type.charAt(0).toUpperCase() + type.slice(1)}
+        {type?.charAt(0).toUpperCase() + type?.slice(1)}
       </span>
     );
   };

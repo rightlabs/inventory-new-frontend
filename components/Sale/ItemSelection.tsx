@@ -13,7 +13,13 @@ const isPipeSheet = (item) => item.itemType === "PipeSheet";
 const isFitting = (item) => item.itemType === "Fitting";
 const isPolish = (item) => item.itemType === "Polish";
 
-export default function ItemSelection({ item, index, items, onItemChange }) {
+export default function ItemSelection({
+  item,
+  index,
+  items,
+  onItemChange,
+  quantityErrors,
+}) {
   // Get filtered options for a specific field based on current selections
   const getFilteredOptions = (field) => {
     // Start with all items
@@ -368,6 +374,11 @@ export default function ItemSelection({ item, index, items, onItemChange }) {
             step="0.01"
             placeholder="Enter weight"
           />
+          {quantityErrors[index]?.hasError && (
+            <p className="text-red-500 text-xs mt-1">
+              {quantityErrors[index].message}
+            </p>
+          )}
         </div>
       );
     }
@@ -392,6 +403,11 @@ export default function ItemSelection({ item, index, items, onItemChange }) {
           step="1"
           placeholder="Enter quantity"
         />
+        {quantityErrors[index]?.hasError && (
+          <p className="text-red-500 text-xs mt-1">
+            {quantityErrors[index].message}
+          </p>
+        )}
       </div>
     );
   };
