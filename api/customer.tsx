@@ -59,3 +59,14 @@ export const getCustomerLedger = async (
     throw error;
   }
 };
+
+export const getCustomerTotalSales = async (customerId: string) => {
+  try {
+    const response = await API_INSTANCE.get(
+      `/customer/${customerId}/total-sales`
+    );
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};

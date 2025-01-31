@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Download, Plus, FileText } from "lucide-react";
-import { getCustomers, Customer } from "@/api/customer";
+import { getCustomers, Customer, getCustomerTotalSales } from "@/api/customer";
 import CustomerForm from "@/components/Forms/CustomerForm";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import { getCustomerLedger } from "@/api/customer";
@@ -31,9 +31,24 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     try {
       setIsLoading(true);
-      const response = await getCustomers();
-      if (response?.data?.statusCode === 200) {
-        setCustomers(response.data.data);
+      const [customersResponse, ...totalSalesResponses] = await Promise.all([
+        getCustomers(),
+        ...customers.map((customer) => getCustomerTotalSales(customer._id)),
+      ]);
+
+      if (customersResponse?.data?.statusCode === 200) {
+        const customersWithTotalSales = await Promise.all(
+          customersResponse.data.data.map(async (customer, index) => {
+            const totalSalesResponse = await getCustomerTotalSales(
+              customer._id
+            );
+            return {
+              ...customer,
+              totalSales: totalSalesResponse?.data?.data?.totalSales || 0,
+            };
+          })
+        );
+        setCustomers(customersWithTotalSales);
       }
     } catch (error) {
       toast.error("Failed to fetch customers");
@@ -148,6 +163,7 @@ export default function CustomersPage() {
             </Button>
           </div>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <div className="text-center py-4">Loading customers...</div>
@@ -161,9 +177,6 @@ export default function CustomersPage() {
                     </th>
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Customer
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                      Type
                     </th>
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Contact
@@ -202,9 +215,7 @@ export default function CustomersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 align-middle">
-                        <TypeBadge type={customer.type} />
-                      </td>
+
                       <td className="p-4 align-middle">
                         <div className="text-sm">
                           <div>{customer.phone}</div>
@@ -232,7 +243,7 @@ export default function CustomersPage() {
                             size="icon"
                             onClick={() => handleViewLedger(customer._id)}
                           >
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <FileText className="h-4 w-4 " />
                           </Button>
                         </div>
                       </td>

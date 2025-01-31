@@ -119,3 +119,9 @@ export const addSalePayment = async (
     throw error;
   }
 };
+
+export const downloadSaleInvoice = async (saleId: string) => {
+  return API_INSTANCE.get(`/sale/${saleId}/invoice`, {
+    responseType: "blob",
+  });
+};

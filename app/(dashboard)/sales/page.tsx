@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,13 +10,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, FileText } from "lucide-react";
+import { Download, Plus, FileText, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
 import { getCustomers, Customer } from "@/api/customer";
 import { downloadSaleInvoice, getSales, Sale } from "@/api/sale";
 import { getItems } from "@/api/items";
 import SaleForm from "@/components/Forms/SaleForm";
-import { PaymentModal } from "@/components/Forms/PaymentModal";
+import PaymentModal from "@/components/Forms/PaymentModal";
 
 export default function SalesPage() {
   const [open, setOpen] = useState(false);
@@ -70,10 +69,8 @@ export default function SalesPage() {
 
   const StatusBadge = ({ status }: { status: Sale["status"] }) => {
     const styles = {
-      draft: "bg-gray-100 text-gray-800",
-      processing: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      cancelled: "bg-red-100 text-red-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      delivered: "bg-green-100 text-green-800",
     };
 
     return (
@@ -87,8 +84,8 @@ export default function SalesPage() {
 
   const PaymentBadge = ({ status }: { status: Sale["paymentStatus"] }) => {
     const styles = {
-      pending: "bg-yellow-100 text-yellow-800",
-      partial: "bg-blue-100 text-blue-800",
+      unpaid: "bg-red-100 text-red-800",
+      partial: "bg-yellow-100 text-yellow-800",
       paid: "bg-green-100 text-green-800",
     };
 
@@ -101,34 +98,28 @@ export default function SalesPage() {
     );
   };
 
-  // In your SalesPage component
-
   const downloadInvoice = async (sale: Sale) => {
     try {
       const response = await downloadSaleInvoice(sale._id);
-
-      // Create a blob from the PDF Stream
       const blob = new Blob([response.data], { type: "application/pdf" });
-
-      // Create a link element and trigger download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `Invoice-${sale.saleNumber}.pdf`;
-
-      // Trigger download
       document.body.appendChild(link);
       link.click();
-
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
       toast.success("Invoice downloaded successfully");
     } catch (error) {
       console.error("Error downloading invoice:", error);
       toast.error("Failed to download invoice");
     }
+  };
+
+  const handlePaymentClick = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowPaymentModal(true);
   };
 
   return (
@@ -194,17 +185,14 @@ export default function SalesPage() {
                       Customer
                     </th>
                     <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                      Items
-                    </th>
-                    <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Total
                     </th>
                     <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Balance
                     </th>
-                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                    {/* <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Status
-                    </th>
+                    </th> */}
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Payment
                     </th>
@@ -219,12 +207,14 @@ export default function SalesPage() {
                       key={sale._id}
                       className="border-b transition-colors hover:bg-muted/50"
                     >
-                      <td className="p-4 align-middle">
-                        {new Date(sale.date).toLocaleDateString()}
-                      </td>
                       <td className="p-4 align-middle font-medium">
-                        {sale.saleNumber}
+                        {new Intl.DateTimeFormat("en-IN", {
+                          year: "2-digit",
+                          month: "2-digit",
+                          day: "2-digit",
+                        }).format(new Date(sale.date))}
                       </td>
+                      <td className="p-4 align-middle">{sale.saleNumber}</td>
                       <td className="p-4 align-middle">
                         <div>
                           <div className="font-medium">
@@ -236,48 +226,35 @@ export default function SalesPage() {
                         </div>
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {sale.itemCount}
-                      </td>
-                      <td className="p-4 align-middle text-right">
                         ₹{sale.grandTotal.toLocaleString()}
                       </td>
-                      <td className="p-4 align-middle text-right">
+                      <td className="p-4 align-middle text-center">
                         ₹{sale.balanceAmount.toLocaleString()}
                       </td>
-                      <td className="p-4 align-middle">
+                      {/* <td className="p-4 align-middle">
                         <StatusBadge status={sale.status} />
-                      </td>
+                      </td> */}
                       <td className="p-4 align-middle">
                         <PaymentBadge status={sale.paymentStatus} />
                       </td>
                       <td className="p-4 align-middle">
                         <div className="flex justify-center gap-2">
-                          {/* Payment Button */}
-                          {/* <Button
-                            variant="ghost"
+                          <Button
+                            variant="outline"
                             size="icon"
-                            onClick={() => {
-                              setSelectedSale(sale);
-                              setShowPaymentModal(true);
-                            }}
+                            onClick={() => handlePaymentClick(sale)}
                             disabled={sale.paymentStatus === "paid"}
                             title="Add Payment"
                           >
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </Button> */}
-
-                          {/* Download Invoice Button */}
+                            <Wallet className="h-4 w-4 " />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              // Add your download invoice logic here
-                              // You'll need to implement this function
-                              downloadInvoice(sale);
-                            }}
+                            onClick={() => downloadInvoice(sale)}
                             title="Download Invoice"
                           >
-                            <Download className="h-4 w-4 text-muted-foreground" />
+                            <Download className="h-4 w-4 " />
                           </Button>
                         </div>
                       </td>
@@ -286,7 +263,7 @@ export default function SalesPage() {
                   {sales.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={8}
                         className="p-4 text-center text-muted-foreground"
                       >
                         No sales found

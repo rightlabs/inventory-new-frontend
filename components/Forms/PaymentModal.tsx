@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addPayment } from "@/api/transaction"; // Import the correct API function
+import { addPayment, addSalePayment } from "@/api/transaction";
 import toast from "react-hot-toast";
 
 // Interfaces
@@ -69,7 +69,9 @@ export default function PaymentModal({
     if (document) {
       setFormData((prev) => ({
         ...prev,
-        amount: document.balanceAmount.toString(),
+        amount:
+          Math.floor(document.balanceAmount * 1000) /
+          (1000).toFixed(3).replace(/[.,]00$/, ""),
       }));
     }
   };
@@ -103,8 +105,12 @@ export default function PaymentModal({
         notes: formData.notes || `Payment against ${documentNumber}`,
       };
 
-      // Call the addPayment API with the correct document ID
-      const response = await addPayment(document._id, paymentData);
+      let response;
+      if (sale) {
+        response = await addSalePayment(sale._id, paymentData);
+      } else if (purchase) {
+        response = await addPayment(purchase._id, paymentData);
+      }
 
       if (response?.data?.statusCode === 200) {
         toast.success("Payment added successfully");
@@ -113,6 +119,7 @@ export default function PaymentModal({
       }
     } catch (error) {
       toast.error("Failed to add payment");
+      console.error("Payment error:", error);
     }
   };
 
