@@ -1,45 +1,26 @@
 "use client";
-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const recentSales = [
-  {
-    name: "Rajesh Kumar",
-    email: "rajesh@example.com",
-    amount: "₹45,000",
-    status: "completed",
-  },
-  {
-    name: "Priya Sharma",
-    email: "priya@example.com",
-    amount: "₹78,500",
-    status: "pending",
-  },
-  {
-    name: "Amit Patel",
-    email: "amit@example.com",
-    amount: "₹23,900",
-    status: "completed",
-  },
-  {
-    name: "Sneha Verma",
-    email: "sneha@example.com",
-    amount: "₹92,000",
-    status: "processing",
-  },
-  {
-    name: "Vikram Singh",
-    email: "vikram@example.com",
-    amount: "₹17,500",
-    status: "completed",
-  },
-];
+interface RecentSale {
+  name: string;
+  email: string;
+  amount: string;
+  status: string;
+}
 
-export function RecentSales() {
+interface RecentSalesProps {
+  sales: RecentSale[];
+}
+
+export function RecentSales({ sales }: RecentSalesProps) {
+  if (!sales || sales.length === 0) {
+    return <div>No recent sales</div>;
+  }
+
   return (
     <div className="space-y-8 mt-4">
-      {recentSales.map((sale) => (
-        <div key={sale.email} className="flex items-center">
+      {sales.map((sale, index) => (
+        <div key={`${sale.name}-${index}`} className="flex items-center">
           <Avatar className="h-9 w-9">
             <AvatarFallback>
               {sale.name
@@ -57,7 +38,7 @@ export function RecentSales() {
               <span>{sale.amount}</span>
               <span
                 className={`text-xs ${
-                  sale.status === "completed"
+                  sale.status === "delivered"
                     ? "text-green-500"
                     : sale.status === "pending"
                     ? "text-yellow-500"
