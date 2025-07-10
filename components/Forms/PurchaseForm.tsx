@@ -433,7 +433,6 @@ const PurchaseModal = ({
       const requiredFields = [
         { name: "vendorId", label: "Vendor" },
         { name: "date", label: "Date" },
-        { name: "invoiceNo", label: "Invoice No" },
       ];
       const missingFields = requiredFields.filter(
         (field) => !formData[field.name as keyof PurchaseFormData]
@@ -812,7 +811,7 @@ const PurchaseModal = ({
 
           <div>
             <label className="text-sm font-medium mb-1 block">
-              Invoice No*
+              Invoice No
             </label>
             <Input
               name="invoiceNo"

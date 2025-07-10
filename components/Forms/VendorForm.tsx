@@ -75,10 +75,9 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">GSTIN*</label>
+              <label className="text-sm font-medium mb-1 block">GSTIN</label>
               <Input
                 {...register("gstin", {
-                  required: "GSTIN is required",
                   pattern: {
                     value:
                       /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
@@ -97,12 +96,10 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
 
             <div>
               <label className="text-sm font-medium mb-1 block">
-                Contact Person*
+                Contact Person
               </label>
               <Input
-                {...register("contactPerson", {
-                  required: "Contact person is required",
-                })}
+                {...register("contactPerson")}
                 placeholder="Enter contact person name"
                 className={errors.contactPerson ? "border-red-500" : ""}
               />
@@ -140,11 +137,10 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
 
             <div>
               <label className="text-sm font-medium mb-1 block">
-                Phone Number*
+                Phone Number
               </label>
               <Input
                 {...register("phone", {
-                  required: "Phone number is required",
                   pattern: {
                     value: /^[0-9]{10}$/,
                     message: "Invalid phone number",
@@ -164,12 +160,10 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
           {/* Address Fields */}
           <div>
             <label className="text-sm font-medium mb-1 block">
-              Address Line 1*
+              Address Line 1
             </label>
             <Input
-              {...register("addressLine1", {
-                required: "Address is required",
-              })}
+              {...register("addressLine1")}
               placeholder="Building number, Street name"
               className={errors.addressLine1 ? "border-red-500" : ""}
             />
@@ -197,10 +191,9 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Pincode*</label>
+              <label className="text-sm font-medium mb-1 block">Pincode</label>
               <Input
                 {...register("pincode", {
-                  required: "Pincode is required",
                   pattern: {
                     value: /^[0-9]{6}$/,
                     message: "Invalid pincode",
@@ -224,11 +217,10 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">
-                Credit Limit*
+                Credit Limit
               </label>
               <Input
                 {...register("creditLimit", {
-                  required: "Credit limit is required",
                   min: {
                     value: 0,
                     message: "Credit limit must be positive",
