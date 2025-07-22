@@ -222,7 +222,7 @@ export default function SalesPage() {
                             {sale.customer.name}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {sale.customer.gstin}
+                            {sale.customer.gstin || "-"}
                           </div>
                         </div>
                       </td>

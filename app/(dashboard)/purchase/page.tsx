@@ -260,7 +260,9 @@ export default function PurchasePage() {
                       <td className="p-4 align-middle font-medium">
                         {purchase.purchaseNumber}
                       </td>
-                      <td className="p-4 align-middle">{purchase.invoiceNo}</td>
+                      <td className="p-4 align-middle">
+                        {purchase?.invoiceNo || "-"}
+                      </td>
                       <td className="p-4 align-middle">
                         {purchase.vendor.name}
                       </td>

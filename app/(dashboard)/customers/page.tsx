@@ -212,16 +212,16 @@ export default function CustomersPage() {
                         <div>
                           <div className="font-medium">{customer.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {customer.contactPerson}
+                            {customer.contactPerson || "-"}
                           </div>
                         </div>
                       </td>
 
                       <td className="p-4 align-middle">
                         <div className="text-sm">
-                          <div>{customer.phone}</div>
+                          <div>{customer.phone || "-"}</div>
                           <div className="text-muted-foreground">
-                            {customer.email}
+                            {customer.email || "-"}
                           </div>
                         </div>
                       </td>

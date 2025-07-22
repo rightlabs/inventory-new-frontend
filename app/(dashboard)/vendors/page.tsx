@@ -230,12 +230,12 @@ export default function VendorsPage() {
                       </td>
                       <td className="p-4 align-middle">{vendor.name}</td>
                       <td className="p-4 align-middle">
-                        {vendor.contactPerson}
+                        {vendor.contactPerson || "-"}
                       </td>
-                      <td className="p-4 align-middle">{vendor.phone}</td>
-                      <td className="p-4 align-middle">{vendor.gstin}</td>
+                      <td className="p-4 align-middle">{vendor.phone || "-"}</td>
+                      <td className="p-4 align-middle">{vendor.gstin || "-"}</td>
                       <td className="p-4 align-middle text-right">
-                        ₹{vendor.creditLimit.toLocaleString()}
+                        {vendor.creditLimit ? `₹${vendor.creditLimit.toLocaleString()}` : "-"}
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatCurrency(vendor?.currentBalance)}
