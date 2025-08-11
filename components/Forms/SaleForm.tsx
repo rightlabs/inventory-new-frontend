@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, Trash2, FileSpreadsheet, Download } from "lucide-react";
 import { createSale } from "@/api/sale";
 import { getCustomerLedger } from "@/api/customer";
 import toast from "react-hot-toast";
@@ -25,6 +25,16 @@ import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
 import ItemSelection from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
+import * as XLSX from "xlsx";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface QuantityError {
   hasError: boolean;
@@ -71,6 +81,9 @@ export default function SalesForm({
   const [quantityErrors, setQuantityErrors] = useState<{
     [key: number]: QuantityError;
   }>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [itemType, setItemType] = useState<string>("");
+  const [uploadMode, setUploadMode] = useState<"manual" | "excel">("manual");
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
     date: new Date(),
@@ -82,6 +95,58 @@ export default function SalesForm({
     paymentReference: "",
   });
 
+  // File headers for Excel validation
+  const FILE_HEADERS = {
+    pipe: [
+      "Type",
+      "Grade",
+      "Size",
+      "Guage",
+      "Pieces",
+      "Weight",
+      "Rate",
+      "Margin",
+      "GST",
+    ],
+    sheet: [
+      "Type",
+      "Grade",
+      "Size",
+      "Guage",
+      "Pieces",
+      "Weight",
+      "Rate",
+      "Margin",
+      "GST",
+    ],
+    fitting: [
+      "Sub Category",
+      "Type",
+      "Size",
+      "Category",
+      "Pieces",
+      "Weight",
+      "Rate",
+      "Margin",
+      "GST",
+    ],
+    polish: [
+      "Sub Category",
+      "Specification",
+      "Pieces",
+      "Rate",
+      "Margin",
+      "GST",
+    ],
+  };
+
+  const ITEM_TYPES = [
+    { value: "pipe", label: "Pipes" },
+    { value: "sheet", label: "Sheets" },
+    { value: "fitting", label: "Fittings" },
+    { value: "polish", label: "Polish Items" },
+  ];
+
   const handleViewLedger = async (customerId: string) => {
     try {
       const response = await getCustomerLedger(customerId);
@@ -91,6 +156,212 @@ export default function SalesForm({
       }
     } catch (error) {
       toast.error("Failed to fetch ledger");
+    }
+  };
+
+  // Helper functions for Excel processing
+  const formatSize = (size: string) => {
+    return size?.replace(/'/g, "'").replace(/"/g, '"') || "";
+  };
+
+  const formatItemName = (row: any, type: string) => {
+    const parts = [];
+
+    if (type === "pipe" || type === "sheet") {
+      const prefix = type === "pipe" ? "Pipe" : "Sheet";
+      parts.push(prefix);
+      if (row["Grade"]) parts.push(row["Grade"]);
+      if (row["Size"]) parts.push(formatSize(row["Size"]));
+      if (row["Guage"]) parts.push(row["Guage"].toString().endsWith('G') ? row["Guage"] : `${row["Guage"]}G`);
+    } else if (type === "fitting") {
+      if (row["Sub Category"]) parts.push(row["Sub Category"]);
+      if (row["Type"]) parts.push(row["Type"]);
+      if (row["Size"]) parts.push(formatSize(row["Size"]));
+      if (row["Category"]) parts.push(row["Category"]);
+    } else if (type === "polish") {
+      if (row["Sub Category"]) parts.push(row["Sub Category"]);
+      if (row["Specification"]) parts.push(row["Specification"]);
+    }
+
+    return parts.filter(Boolean).join("-");
+  };
+
+  const shouldUseWeight = (type: string, subCategory?: string) => {
+    return (
+      type === "pipe" ||
+      type === "sheet" ||
+      (type === "fitting" && subCategory === "Bush")
+    );
+  };
+
+  const validateFileFormat = (headers: string[], type: string): boolean => {
+    const expectedHeaders = FILE_HEADERS[type as keyof typeof FILE_HEADERS];
+    if (!expectedHeaders) return false;
+
+    const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
+    const normalizedExpected = expectedHeaders.map((h) =>
+      h.trim().toLowerCase()
+    );
+
+    return normalizedExpected.every((header) =>
+      normalizedHeaders.includes(header)
+    );
+  };
+
+  const findItemInInventory = (name: string, type: string): InventoryItem | undefined => {
+    return items.find((item) => {
+      // Try exact name match first
+      if (item.name === name) return true;
+      
+      // Try matching with different formatting
+      const normalizedItemName = item.name.toLowerCase().replace(/\s+/g, "");
+      const normalizedSearchName = name.toLowerCase().replace(/\s+/g, "");
+      
+      return normalizedItemName === normalizedSearchName;
+    });
+  };
+
+  const processExcelData = async (file: File) => {
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const headers = jsonData[0] as string[];
+
+        if (!validateFileFormat(headers, itemType)) {
+          toast.error(
+            `Invalid file format for ${itemType} items. Please check the sample file.`
+          );
+          setSelectedFile(null);
+          return;
+        }
+
+        const rows = XLSX.utils.sheet_to_json(worksheet);
+        const processedItems: SaleItem[] = [];
+        const notFoundItems: string[] = [];
+
+        rows.forEach((row: any) => {
+          let currentType = itemType;
+          if (itemType === "pipe" || itemType === "sheet") {
+            currentType =
+              row["Type"]?.toLowerCase() === "sheet" ? "sheet" : "pipe";
+          }
+
+          const name = formatItemName(row, currentType);
+          const inventoryItem = findItemInInventory(name, currentType);
+
+          if (!inventoryItem) {
+            notFoundItems.push(name);
+            return;
+          }
+
+          const pieces = Number(row["Pieces"]) || undefined;
+          const weight = Number(row["Weight"]) || undefined;
+          const rate = Number(row["Rate"]) || inventoryItem.purchaseRate || 0;
+          const margin = Number(row["Margin"]) || 0; // Now absolute margin value
+          const gst = Number(row["GST"]) || inventoryItem.gst || 0;
+
+          const sellingPrice = rate + margin; // Add absolute margin to base rate
+          const quantity = shouldUseWeight(itemType, row["Sub Category"])
+            ? weight || 0
+            : pieces || 0;
+          const amount = quantity * sellingPrice;
+          const gstAmount = (amount * gst) / 100;
+
+          const saleItem: SaleItem = {
+            itemId: inventoryItem._id,
+            type: currentType,
+            name: inventoryItem.name,
+            grade: row["Grade"] || "", // Only for pipe/sheet items
+            size: row["Size"] ? formatSize(row["Size"]) : "",
+            gauge: row["Guage"] ? row["Guage"].toString().replace('G', '') : "",
+            subCategory: row["Sub Category"] || "",
+            specification: row["Specification"] || "",
+            quantity: inventoryItem.unitType === "pieces" ? pieces : undefined,
+            weight: inventoryItem.unitType === "weight" ? weight : undefined,
+            pieces: pieces, // Always store pieces for tracking
+            rate: rate,
+            margin: margin,
+            sellingPrice: sellingPrice,
+            amount: amount,
+            gst: gst,
+            gstAmount: gstAmount,
+          };
+
+          // Check stock availability
+          const stockValidation = checkStockAvailability(inventoryItem, saleItem);
+          if (!stockValidation.valid) {
+            toast.error(`${inventoryItem.name}: ${stockValidation.message}`);
+            return;
+          }
+
+          processedItems.push(saleItem);
+        });
+
+        if (notFoundItems.length > 0) {
+          toast.error(
+            `The following items were not found in inventory: ${notFoundItems.join(", ")}`
+          );
+        }
+
+        if (processedItems.length === 0) {
+          toast.error("No valid items found in the Excel file");
+          setSelectedFile(null);
+          return;
+        }
+
+        setSelectedItems(processedItems);
+        toast.success(`Successfully loaded ${processedItems.length} items`);
+      } catch (error) {
+        console.error("Error processing file:", error);
+        toast.error("Error processing file. Please check the format.");
+        setSelectedFile(null);
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      await processExcelData(file);
+    }
+  };
+
+  const getSampleFileUrl = (type: string) => {
+    switch (type) {
+      case "pipe":
+      case "sheet":
+        return `/Sales-Pipe_Sheet.xlsx`;
+      case "fitting":
+        return `/Sales-Fitting.xlsx`;
+      case "polish":
+        return `/Sales-Polish Items.xlsx`;
+      default:
+        return "";
+    }
+  };
+
+  const downloadSampleFile = () => {
+    if (!itemType) {
+      toast.error("Please select an item type first");
+      return;
+    }
+
+    const url = getSampleFileUrl(itemType);
+    if (url) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = url.split("/").pop() || "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -214,10 +485,7 @@ export default function SalesForm({
           Math.max(
             0,
             parseFloat(
-              (
-                currentItem.rate *
-                (1 + (currentItem.margin || 0) / 100)
-              ).toFixed(2)
+              (currentItem.rate + (currentItem.margin || 0)).toFixed(2)
             )
           )
         );
@@ -345,6 +613,7 @@ export default function SalesForm({
           type: item.type,
           quantity: item.quantity,
           weight: item.weight,
+          pieces: item.pieces || item.quantity, // Include pieces for tracking
           rate: item.rate,
           margin: item.margin,
           sellingPrice: item.sellingPrice,
@@ -396,6 +665,9 @@ export default function SalesForm({
     });
     setSelectedItems([]);
     setSelectedCustomer(null);
+    setSelectedFile(null);
+    setItemType("");
+    setUploadMode("manual");
   };
 
   return (
@@ -514,12 +786,207 @@ export default function SalesForm({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Items</h3>
-            <Button onClick={addItem} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Item
-            </Button>
+            <div className="flex gap-2">
+              <Select 
+                value={uploadMode} 
+                onValueChange={(value: "manual" | "excel") => setUploadMode(value)}
+              >
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual Entry</SelectItem>
+                  <SelectItem value="excel">Excel Upload</SelectItem>
+                </SelectContent>
+              </Select>
+              {uploadMode === "manual" && (
+                <Button onClick={addItem} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" /> Add Item
+                </Button>
+              )}
+            </div>
           </div>
 
-          {selectedItems.map((item, index) => (
+          {/* Excel Upload Section */}
+          {uploadMode === "excel" && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">
+                        Select Item Type*
+                      </label>
+                      <Select value={itemType} onValueChange={setItemType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select item type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ITEM_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={downloadSampleFile}
+                        disabled={!itemType}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Template
+                      </Button>
+                    </div>
+                  </div>
+
+                  {itemType && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium mb-1 block">
+                        Upload Excel File
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <Input
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleFileSelect}
+                          className="flex-1"
+                        />
+                        {selectedFile && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <FileSpreadsheet className="h-4 w-4" />
+                            {selectedFile.name}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Upload an Excel file with items to add to the sale. The file must
+                        include columns for item details, quantities, rates, margins (absolute value in ₹), and GST.
+                        Selling Price = Rate + Margin
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Display Items Table for Excel Upload */}
+          {uploadMode === "excel" && selectedItems.length > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Qty/Weight</TableHead>
+                      <TableHead>Rate (₹)</TableHead>
+                      <TableHead>Margin (₹)</TableHead>
+                      <TableHead>Selling Price</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>GST (%)</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedItems.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>
+                          {item.weight ? `${item.weight} kg` : `${item.quantity} pcs`}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => {
+                              const newRate = Number(e.target.value) || 0;
+                              const newItems = [...selectedItems];
+                              newItems[index] = {
+                                ...newItems[index],
+                                rate: newRate,
+                                sellingPrice: newRate + (newItems[index].margin || 0),
+                              };
+                              // Recalculate amount
+                              const quantity = item.weight || item.quantity || 0;
+                              newItems[index].amount = quantity * newItems[index].sellingPrice;
+                              newItems[index].gstAmount = (newItems[index].amount * newItems[index].gst) / 100;
+                              setSelectedItems(newItems);
+                            }}
+                            className="w-20"
+                            min="0"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={item.margin}
+                            onChange={(e) => {
+                              const newMargin = Number(e.target.value) || 0;
+                              const newItems = [...selectedItems];
+                              newItems[index] = {
+                                ...newItems[index],
+                                margin: newMargin,
+                                sellingPrice: newItems[index].rate + newMargin,
+                              };
+                              // Recalculate amount
+                              const quantity = item.weight || item.quantity || 0;
+                              newItems[index].amount = quantity * newItems[index].sellingPrice;
+                              newItems[index].gstAmount = (newItems[index].amount * newItems[index].gst) / 100;
+                              setSelectedItems(newItems);
+                            }}
+                            className="w-20"
+                            min="0"
+                          />
+                        </TableCell>
+                        <TableCell>₹{item.sellingPrice.toFixed(2)}</TableCell>
+                        <TableCell>₹{item.amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={item.gst}
+                            onChange={(e) => {
+                              const newGst = Number(e.target.value) || 0;
+                              const newItems = [...selectedItems];
+                              newItems[index] = {
+                                ...newItems[index],
+                                gst: newGst,
+                                gstAmount: (newItems[index].amount * newGst) / 100,
+                              };
+                              setSelectedItems(newItems);
+                            }}
+                            className="w-16"
+                            min="0"
+                            max="100"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          ₹{(item.amount + item.gstAmount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedItems(items => items.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Manual Entry Items */}
+          {uploadMode === "manual" && selectedItems.map((item, index) => (
             <div key={index} className="border p-4 rounded-lg space-y-4">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">Item {index + 1}</h4>
@@ -577,7 +1044,9 @@ export default function SalesForm({
 
           {selectedItems.length === 0 && (
             <div className="text-center py-8 text-muted-foreground border rounded-lg">
-              No items added. Click "Add Item" to start adding products.
+              {uploadMode === "manual" 
+                ? 'No items added. Click "Add Item" to start adding products.'
+                : 'No items uploaded. Please select item type and upload Excel file.'}
             </div>
           )}
         </div>

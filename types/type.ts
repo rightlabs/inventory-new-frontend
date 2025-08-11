@@ -135,8 +135,9 @@ export interface SaleItem {
   specification?: string;
   quantity?: number;
   weight?: number;
+  pieces?: number; // Added for tracking pieces in sales
   rate: number;
-  margin: number;
+  margin: number; // Absolute margin value in currency (₹), not percentage
   sellingPrice: number;
   amount: number;
   gst: number;
