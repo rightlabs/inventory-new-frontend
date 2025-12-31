@@ -31,7 +31,6 @@ interface Purchase {
   };
   totalAmount: number;
   discount: number;
-  gstAmount: number;
   grandTotal: number;
   balanceAmount: number;
   status: "pending" | "received";

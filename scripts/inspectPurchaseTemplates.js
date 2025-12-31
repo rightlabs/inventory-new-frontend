@@ -1,30 +1,64 @@
-const XLSX = require('xlsx');
+const XlsxPopulate = require('xlsx-populate');
 const path = require('path');
 
-function inspectTemplate(filename) {
+async function inspectTemplate(filename) {
   console.log(`\n=== Inspecting ${filename} ===`);
-  
+
   const filePath = path.join(__dirname, '..', 'public', filename);
-  const workbook = XLSX.readFile(filePath);
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  
-  // Get data
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-  console.log('Headers:', jsonData[0]);
-  console.log('Sample data:', jsonData.slice(1, 3));
-  
-  // Check for data validation
-  if (worksheet['!dataValidation']) {
-    console.log('Data validations found:');
-    worksheet['!dataValidation'].forEach((validation, index) => {
-      console.log(`  ${index + 1}. Range: ${validation.sqref}, Values: ${validation.formula1}`);
-    });
-  } else {
-    console.log('No data validations found');
+  const workbook = await XlsxPopulate.fromFileAsync(filePath);
+  const sheet = workbook.sheet(0);
+
+  // Get headers from row 1
+  const headers = [];
+  let col = 1;
+  while (true) {
+    const value = sheet.cell(1, col).value();
+    if (!value) break;
+    headers.push(value);
+    col++;
+  }
+  console.log('Headers:', headers);
+
+  // Get sample data from rows 2-3
+  console.log('Sample data:');
+  for (let row = 2; row <= 3; row++) {
+    const rowData = [];
+    for (let c = 1; c <= headers.length; c++) {
+      rowData.push(sheet.cell(row, c).value());
+    }
+    console.log(`  Row ${row}:`, rowData);
+  }
+
+  // Check for data validations
+  console.log('Data validations:');
+  const columnLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  let foundValidations = false;
+
+  for (let c = 0; c < headers.length; c++) {
+    const cellRef = `${columnLetters[c]}2`;
+    const cell = sheet.cell(cellRef);
+    const validation = cell.dataValidation();
+
+    if (validation && validation.type === 'list') {
+      foundValidations = true;
+      const options = validation.formula1.replace(/^"|"$/g, '').split(',');
+      console.log(`  Column ${columnLetters[c]} (${headers[c]}): ${options.length} options - ${options.slice(0, 5).join(', ')}${options.length > 5 ? '...' : ''}`);
+    }
+  }
+
+  if (!foundValidations) {
+    console.log('  No data validations found');
   }
 }
 
-// Inspect all purchase templates
-inspectTemplate('Items-Pipe_Sheet.xlsx');
-inspectTemplate('Items-Fitting.xlsx');
-inspectTemplate('Items-Polish Items.xlsx');
+async function inspectAll() {
+  await inspectTemplate('Items-Pipe_Sheet.xlsx');
+  await inspectTemplate('Items-Fitting.xlsx');
+  await inspectTemplate('Items-Polish Items.xlsx');
+  console.log('\n--- Sales Templates ---');
+  await inspectTemplate('Sales-Pipe_Sheet.xlsx');
+  await inspectTemplate('Sales-Fitting.xlsx');
+  await inspectTemplate('Sales-Polish Items.xlsx');
+}
+
+inspectAll().catch(console.error);

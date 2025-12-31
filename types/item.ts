@@ -12,7 +12,6 @@ export interface BaseItemAttributes {
   purchaseRate: number;
   sellingRate: number;
   margin: number;
-  gst: number;
   unitType: UnitType;
   itemType: ItemType;
 }
@@ -65,8 +64,6 @@ export interface SaleItem {
   margin: number;
   sellingPrice: number;
   amount: number;
-  gst: number;
-  gstAmount: number;
   itemModel?: ItemType;
 }
 

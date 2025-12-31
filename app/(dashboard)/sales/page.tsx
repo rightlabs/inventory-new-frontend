@@ -103,10 +103,40 @@ export default function SalesPage() {
     try {
       const response = await downloadSaleInvoice(sale._id);
       const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileName = `${sale.saleNumber}.pdf`;
+
+      // Try to use File System Access API for custom save location
+      if ("showSaveFilePicker" in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: fileName,
+            startIn: "downloads",
+            types: [
+              {
+                description: "PDF Files",
+                accept: { "application/pdf": [".pdf"] },
+              },
+            ],
+          });
+
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          toast.success("Invoice saved successfully");
+          return;
+        } catch (err: any) {
+          // User cancelled or API failed, fall back to regular download
+          if (err.name === "AbortError") {
+            return; // User cancelled
+          }
+        }
+      }
+
+      // Fallback: Regular download with suggested folder in filename
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Invoice-${sale.saleNumber}.pdf`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -243,19 +273,21 @@ export default function SalesPage() {
                           <Button
                             variant="outline"
                             size="icon"
+                            className="group"
                             onClick={() => handlePaymentClick(sale)}
                             disabled={sale.paymentStatus === "paid"}
                             title="Add Payment"
                           >
-                            <Wallet className="h-4 w-4 " />
+                            <Wallet className="h-4 w-4 group-hover:text-primary" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="group"
                             onClick={() => downloadInvoice(sale)}
                             title="Download Invoice"
                           >
-                            <Download className="h-4 w-4 " />
+                            <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           </Button>
                         </div>
                       </td>

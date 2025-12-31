@@ -31,13 +31,20 @@ export default function LoginPage() {
       if (res.data.statusCode == 200 || res.data.statusCode == 201) {
         Cookies.set("authToken", res.data.data.accessToken);
         toast.success("Login successful");
-        window.location.href = "/dashboard";
+
+        // Redirect based on user role
+        const userRole = res.data.data.user?.role;
+        if (userRole === "sales") {
+          window.location.href = "/sales";
+        } else {
+          window.location.href = "/dashboard";
+        }
       }
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
       const errorMessage =
         axiosError.response?.data?.message || "Invalid email or password";
-      console.log(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

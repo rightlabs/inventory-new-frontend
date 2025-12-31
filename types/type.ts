@@ -35,9 +35,9 @@ export interface BaseItem {
   currentStock: number;
   minimumStock: number;
   purchaseRate: number;
+  averageRate: number;
   sellingRate: number;
   margin: number;
-  gst: number;
   lastPurchaseDate?: string;
   unitType: UnitType;
   status: ItemStatus;
@@ -140,8 +140,6 @@ export interface SaleItem {
   margin: number; // Absolute margin value in currency (₹), not percentage
   sellingPrice: number;
   amount: number;
-  gst: number;
-  gstAmount: number;
   variant?: string | null;
 }
 
@@ -159,7 +157,6 @@ export interface Sale {
   items: SaleItem[];
   totalAmount: number;
   discount: number;
-  gstAmount: number;
   grandTotal: number;
   balanceAmount: number;
   status: "pending" | "delivered";
@@ -176,8 +173,6 @@ export interface PurchaseItem {
   weight?: number;
   rate: number;
   amount: number;
-  gst: number;
-  gstAmount: number;
 }
 
 export interface Purchase {
@@ -192,7 +187,6 @@ export interface Purchase {
   items: PurchaseItem[];
   totalAmount: number;
   discount: number;
-  gstAmount: number;
   grandTotal: number;
   balanceAmount: number;
   status: "pending" | "received";
@@ -234,6 +228,23 @@ export interface InventoryStats {
     totalValue: number;
     itemCount: number;
   }[];
+}
+
+export interface SummaryStats {
+  totalSalesCount: number;
+  totalPurchaseCount: number;
+  totalCustomers: number;
+  totalVendors: number;
+  totalReceivables: number;
+  totalPayables: number;
+  averageOrderValue: number;
+}
+
+export interface TopSellingItem {
+  _id: string;
+  name: string;
+  totalQuantity: number;
+  totalValue: number;
 }
 
 // API Filter Types

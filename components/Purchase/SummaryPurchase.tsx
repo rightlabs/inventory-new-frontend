@@ -4,7 +4,6 @@ const SummaryPurchase: React.FC<{
   calculateFinalAmounts: any;
   processedData: {
     totalAmount: number;
-    totalTax: number;
   };
   formData: any;
   formatCurrency: (num: number) => string;
@@ -15,7 +14,7 @@ const SummaryPurchase: React.FC<{
   return (
     <div className="bg-gray-50 p-4 rounded-lg space-y-2">
       <div className="flex justify-between">
-        <span className="text-sm">Taxable Amount</span>
+        <span className="text-sm">Total Amount</span>
         <span>{formatCurrency(processedData.totalAmount)}</span>
       </div>
       {formData.discount > 0 && (
@@ -24,10 +23,6 @@ const SummaryPurchase: React.FC<{
           <span>{formatCurrency(calculations.discountAmount)}</span>
         </div>
       )}
-      <div className="flex justify-between">
-        <span className="text-sm">Total GST</span>
-        <span>{formatCurrency(processedData.totalTax)}</span>
-      </div>
       {formData.freight > 0 && (
         <div className="flex justify-between">
           <span className="text-sm">Freight</span>

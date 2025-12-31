@@ -25,10 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit2, Package } from "lucide-react";
+import { Edit2, Package, History } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
+import PriceHistoryModal from "@/components/PriceHistoryModal";
 import {
   BaseItem,
   FittingItem,
@@ -95,6 +96,11 @@ export default function ItemsPage() {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
   const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
+  const [priceHistoryItem, setPriceHistoryItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Implement throttling for search
   useEffect(() => {
@@ -240,6 +246,9 @@ export default function ItemsPage() {
             <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
               Rate
             </th>
+            <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+              Avg Rate
+            </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Status
             </th>
@@ -265,20 +274,39 @@ export default function ItemsPage() {
               <td className="p-4 align-middle text-right">
                 ₹{item.purchaseRate.toFixed(2)}
               </td>
+              <td className="p-4 align-middle text-right">
+                <span className="text-primary font-medium">
+                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2)}
+                </span>
+              </td>
               <td className="p-4 align-middle">
                 <StatusBadge status={item.status} />
               </td>
               <td className="p-4 align-middle">
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="group"
+                    title="Price History"
+                    onClick={() => {
+                      setPriceHistoryItem({ id: item._id, name: item.name });
+                      setPriceHistoryOpen(true);
+                    }}
+                  >
+                    <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="group"
+                    title="Edit Item"
                     onClick={() => {
                       setSelectedItem(item);
                       setOpen(true);
                     }}
                   >
-                    <Edit2 className="h-4 w-4 text-muted-foreground" />
+                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
                 </div>
               </td>
@@ -312,14 +340,14 @@ export default function ItemsPage() {
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Sub Category
             </th>
-            <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-              Category
-            </th>
             <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
               Stock
             </th>
             <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
               Rate
+            </th>
+            <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+              Avg Rate
             </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Status
@@ -342,7 +370,6 @@ export default function ItemsPage() {
               </td>
               <td className="p-4 align-middle">{item.size}</td>
               <td className="p-4 align-middle">{item.subCategory}</td>
-              <td className="p-4 align-middle">{item.category}</td>
               <td className="p-4 align-middle text-right">
                 {Number(item.currentStock)
                   .toFixed(2)
@@ -352,20 +379,39 @@ export default function ItemsPage() {
               <td className="p-4 align-middle text-right">
                 ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
               </td>
+              <td className="p-4 align-middle text-right">
+                <span className="text-primary font-medium">
+                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2).replace(/[.,]00$/, "")}
+                </span>
+              </td>
               <td className="p-4 align-middle">
                 <StatusBadge status={item.status} />
               </td>
               <td className="p-4 align-middle">
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="group"
+                    title="Price History"
+                    onClick={() => {
+                      setPriceHistoryItem({ id: item._id, name: item.name });
+                      setPriceHistoryOpen(true);
+                    }}
+                  >
+                    <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="group"
+                    title="Edit Item"
                     onClick={() => {
                       setSelectedItem(item);
                       setOpen(true);
                     }}
                   >
-                    <Edit2 className="h-4 w-4 text-muted-foreground" />
+                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
                 </div>
               </td>
@@ -399,6 +445,9 @@ export default function ItemsPage() {
             <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
               Rate
             </th>
+            <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+              Avg Rate
+            </th>
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Status
             </th>
@@ -424,20 +473,39 @@ export default function ItemsPage() {
               <td className="p-4 align-middle text-right">
                 ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
               </td>
+              <td className="p-4 align-middle text-right">
+                <span className="text-primary font-medium">
+                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2).replace(/[.,]00$/, "")}
+                </span>
+              </td>
               <td className="p-4 align-middle">
                 <StatusBadge status={item.status} />
               </td>
               <td className="p-4 align-middle">
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="group"
+                    title="Price History"
+                    onClick={() => {
+                      setPriceHistoryItem({ id: item._id, name: item.name });
+                      setPriceHistoryOpen(true);
+                    }}
+                  >
+                    <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="group"
+                    title="Edit Item"
                     onClick={() => {
                       setSelectedItem(item);
                       setOpen(true);
                     }}
                   >
-                    <Edit2 className="h-4 w-4 text-muted-foreground" />
+                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
                 </div>
               </td>
@@ -736,6 +804,16 @@ export default function ItemsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Price History Modal */}
+      {priceHistoryItem && (
+        <PriceHistoryModal
+          open={priceHistoryOpen}
+          onOpenChange={setPriceHistoryOpen}
+          itemId={priceHistoryItem.id}
+          itemName={priceHistoryItem.name}
+        />
+      )}
     </div>
   );
 }

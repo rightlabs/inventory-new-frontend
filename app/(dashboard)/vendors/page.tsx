@@ -247,10 +247,10 @@ export default function VendorsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 group"
                           onClick={() => handleViewLedger(vendor?._id)}
                         >
-                          <ScrollText className="h-4 w-4" />
+                          <ScrollText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                         </Button>
                       </td>
                     </tr>

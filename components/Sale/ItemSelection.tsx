@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect, KeyboardEvent } from "react";
 import {
   Select,
   SelectContent,
@@ -7,11 +7,58 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { InventoryItem } from "@/types/type";
+import { Search, Package, AlertCircle } from "lucide-react";
 
-// Type guard functions
-const isPipeSheet = (item: any) => item.itemType === "PipeSheet";
-const isFitting = (item: any) => item.itemType === "Fitting";
-const isPolish = (item: any) => item.itemType === "Polish";
+interface ItemSelectionProps {
+  item: any;
+  index: number;
+  items: InventoryItem[];
+  onItemChange: (index: number, item: any) => void;
+  quantityErrors: { [key: number]: { hasError: boolean; message: string } };
+}
+
+// Type categories for selection
+const ITEM_CATEGORIES = [
+  { value: "pipe", label: "Pipe" },
+  { value: "sheet", label: "Sheet" },
+  { value: "fitting", label: "Fitting" },
+  { value: "polish", label: "Polish" },
+];
+
+// Helper function to sanitize numeric input - only allows digits and decimal point
+const sanitizeNumericInput = (value: string): string => {
+  let sanitized = value.replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  if (parts.length > 2) {
+    sanitized = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return sanitized;
+};
+
+// Helper to prevent invalid key presses in number inputs
+const handleNumericKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  if (
+    e.key === 'Backspace' ||
+    e.key === 'Delete' ||
+    e.key === 'Tab' ||
+    e.key === 'Escape' ||
+    e.key === 'Enter' ||
+    e.key === '.' ||
+    e.key === 'ArrowLeft' ||
+    e.key === 'ArrowRight' ||
+    e.key === 'Home' ||
+    e.key === 'End'
+  ) {
+    return;
+  }
+  if (e.ctrlKey || e.metaKey) {
+    return;
+  }
+  if (!/^\d$/.test(e.key)) {
+    e.preventDefault();
+  }
+};
 
 export default function ItemSelection({
   item,
@@ -19,566 +66,465 @@ export default function ItemSelection({
   items,
   onItemChange,
   quantityErrors,
-}: any) {
-  // Get filtered options for a specific field based on current selections
-  const getFilteredOptions = (field: any) => {
-    // Start with all items
-    let filteredItems = items;
+}: ItemSelectionProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-    // Apply type-specific filters
-    if (item.type) {
-      filteredItems = items.filter((i: any) => {
-        if (item.type === "pipe" || item.type === "sheet") {
-          return isPipeSheet(i) && i.type === item.type;
-        }
-        if (item.type === "fitting") {
-          return isFitting(i);
-        }
-        if (item.type === "polish") {
-          return isPolish(i);
-        }
-        return false;
-      });
-    }
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    // Apply grade filter if selected
-    if (item.grade) {
-      filteredItems = filteredItems.filter((i: any) => i.grade === item.grade);
-    }
-
-    // Apply size filter if selected
-    if (item.size) {
-      filteredItems = filteredItems.filter((i: any) => i.size === item.size);
-    }
-
-    // Apply subcategory filter if selected
-    if (item.subCategory) {
-      filteredItems = filteredItems.filter(
-        (i: any) => i.subCategory === item.subCategory
-      );
-    }
-
-    // Get unique values for the requested field
-    const values = new Set();
-    filteredItems.forEach((i: any) => {
-      const value = i[field];
-      if (value) values.add(value);
-    });
-
-    return Array.from(values).sort();
-  };
-
-  // Get available products based on all current selections
-  const availableProducts = useMemo(() => {
+  // Filter items by category
+  const categoryFilteredItems = useMemo(() => {
     if (!item.type) return [];
 
     return items.filter((i: any) => {
-      if (item.type === "pipe" || item.type === "sheet") {
-        return (
-          isPipeSheet(i) &&
-          i.type === item.type &&
-          (!item.grade || i.grade === item.grade) &&
-          (!item.size || i.size === item.size) &&
-          (!item.gauge || i.gauge === item.gauge)
-        );
+      if (item.type === "pipe") {
+        return i.itemType === "PipeSheet" && i.type === "pipe";
       }
-
+      if (item.type === "sheet") {
+        return i.itemType === "PipeSheet" && i.type === "sheet";
+      }
       if (item.type === "fitting") {
-        return (
-          isFitting(i) &&
-          (!item.subCategory || i.subCategory === item.subCategory) &&
-          (!item.grade || i.grade === item.grade) &&
-          (!item.size || i.size === item.size)
-        );
+        return i.itemType === "Fitting";
       }
-
       if (item.type === "polish") {
-        return (
-          isPolish(i) &&
-          (!item.subCategory || i.type === item.subCategory) &&
-          (!item.specification || i.specification === item.specification)
-        );
+        return i.itemType === "Polish";
       }
-
       return false;
     });
-  }, [items, item]);
+  }, [items, item.type]);
 
-  const renderPipeSheetFields = () => (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <label className="text-sm font-medium mb-1 block">Grade*</label>
-        <Select
-          value={item.grade || ""}
-          onValueChange={(value) => {
-            onItemChange(index, {
-              ...item,
-              grade: value,
-              size: undefined,
-              gauge: undefined,
-              itemId: "",
-            });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select grade" />
-          </SelectTrigger>
-          <SelectContent>
-            {getFilteredOptions("grade").map((grade: any) => (
-              <SelectItem key={grade} value={grade}>
-                {grade}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  // Search filtered items - searches across all words
+  const searchFilteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return categoryFilteredItems;
 
-      {item.grade && (
-        <div>
-          <label className="text-sm font-medium mb-1 block">Size*</label>
-          <Select
-            value={item.size || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                ...item,
-                size: value,
-                gauge: undefined,
-                itemId: "",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select size" />
-            </SelectTrigger>
-            <SelectContent>
-              {getFilteredOptions("size").map((size: any) => (
-                <SelectItem key={size} value={size}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+    const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
 
-      {item.size && (
-        <div>
-          <label className="text-sm font-medium mb-1 block">Gauge*</label>
-          <Select
-            value={item.gauge || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                ...item,
-                gauge: value,
-                itemId: "",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gauge" />
-            </SelectTrigger>
-            <SelectContent>
-              {getFilteredOptions("gauge").map((gauge: any) => (
-                <SelectItem key={gauge} value={gauge}>
-                  {gauge}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-    </div>
-  );
+    return categoryFilteredItems.filter((product: any) => {
+      // Create a searchable string from all relevant fields
+      const searchableText = [
+        product.name,
+        product.code,
+        product.grade,
+        product.size,
+        product.gauge,
+        product.subCategory,
+        product.specification,
+        product.type,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-  const renderFittingFields = () => (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <label className="text-sm font-medium mb-1 block">Category*</label>
-        <Select
-          value={item.subCategory || ""}
-          onValueChange={(value) => {
-            onItemChange(index, {
-              ...item,
-              subCategory: value,
-              grade: undefined,
-              size: undefined,
-              itemId: "",
-            });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {getFilteredOptions("subCategory").map((category: any) => (
-              <SelectItem key={category} value={category}>
-                {category.replace(/_/g, " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      // All search terms must match somewhere in the searchable text
+      return searchTerms.every(term => searchableText.includes(term));
+    });
+  }, [categoryFilteredItems, searchQuery]);
 
-      {item.subCategory && (
-        <div>
-          <label className="text-sm font-medium mb-1 block">Grade*</label>
-          <Select
-            value={item.grade || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                ...item,
-                grade: value,
-                size: undefined,
-                itemId: "",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select grade" />
-            </SelectTrigger>
-            <SelectContent>
-              {getFilteredOptions("grade").map((grade: any) => (
-                <SelectItem key={grade} value={grade}>
-                  {grade}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+  // Get selected product details
+  const selectedProduct = useMemo(() => {
+    return items.find((p: any) => p._id === item.itemId);
+  }, [items, item.itemId]);
 
-      {item.grade && (
-        <div>
-          <label className="text-sm font-medium mb-1 block">Size*</label>
-          <Select
-            value={item.size || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                ...item,
-                size: value,
-                itemId: "",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select size" />
-            </SelectTrigger>
-            <SelectContent>
-              {getFilteredOptions("size").map((size: any) => (
-                <SelectItem key={size} value={size}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderPolishFields = () => (
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="text-sm font-medium mb-1 block">Type*</label>
-        <Select
-          value={item.subCategory || ""}
-          onValueChange={(value) => {
-            onItemChange(index, {
-              ...item,
-              subCategory: value,
-              specification: undefined,
-              itemId: "",
-            });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            {getFilteredOptions("type").map((type: any) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {item.subCategory && (
-        <div>
-          <label className="text-sm font-medium mb-1 block">
-            Specification*
-          </label>
-          <Select
-            value={item.specification || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                ...item,
-                specification: value,
-                itemId: "",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select specification" />
-            </SelectTrigger>
-            <SelectContent>
-              {getFilteredOptions("specification").map((spec: any) => (
-                <SelectItem key={spec} value={spec}>
-                  {spec}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderTypeSpecificFields = () => {
-    switch (item.type) {
-      case "pipe":
-      case "sheet":
-        return renderPipeSheetFields();
-      case "fitting":
-        return renderFittingFields();
-      case "polish":
-        return renderPolishFields();
-      default:
-        return null;
-    }
+  // Handle category change
+  const handleCategoryChange = (value: string) => {
+    setSearchQuery("");
+    onItemChange(index, {
+      type: value,
+      itemId: "",
+      name: "",
+      grade: "",
+      size: "",
+      gauge: "",
+      subCategory: "",
+      specification: "",
+      quantity: undefined,
+      weight: undefined,
+      pieces: undefined,
+      rate: 0,
+      margin: 0,
+      sellingPrice: 0,
+      amount: 0,
+    });
   };
 
-  const renderQuantityField = () => {
-    const selectedProduct = items.find((p: any) => p._id === item.itemId);
-    if (!selectedProduct) return null;
+  // Handle item selection
+  const handleItemSelect = (product: any) => {
+    setSearchQuery("");
+    setIsDropdownOpen(false);
 
-    if (selectedProduct.unitType === "weight") {
-      return (
-        <div>
-          <label className="text-sm font-medium mb-1 block">Weight (kg)*</label>
-          <Input
-            type="number"
-            value={item.weight || ""}
-            onChange={(e) => {
-              const weight = Number(e.target.value);
-              onItemChange(index, {
-                ...item,
-                weight,
-                quantity: undefined,
-                amount: weight * (item.sellingPrice || 0),
-                gstAmount: (weight * (item.sellingPrice || 0) * item.gst) / 100,
-              });
-            }}
-            min="0"
-            step="0.01"
-            placeholder="Enter weight"
-          />
-          {quantityErrors[index]?.hasError && (
-            <p className="text-red-500 text-xs mt-1">
-              {quantityErrors[index].message}
-            </p>
-          )}
-        </div>
-      );
+    const initialQuantity = product.unitType === "weight" ? undefined : 1;
+    const initialWeight = product.unitType === "weight" ? 0 : undefined;
+
+    onItemChange(index, {
+      ...item,
+      itemId: product._id,
+      name: product.name,
+      grade: product.grade || "",
+      size: product.size || "",
+      gauge: product.gauge || "",
+      subCategory: product.subCategory || "",
+      specification: product.specification || "",
+      rate: product.purchaseRate || 0,
+      margin: 0,
+      sellingPrice: product.purchaseRate || 0,
+      quantity: initialQuantity,
+      weight: initialWeight,
+      pieces: initialQuantity,
+      amount: 0,
+    });
+  };
+
+  // Handle numeric input - allows empty values
+  const handleNumericInput = (
+    field: string,
+    value: string,
+    additionalUpdates?: (numValue: number) => object
+  ) => {
+    // Allow empty string
+    if (value === "" || value === null || value === undefined) {
+      onItemChange(index, {
+        ...item,
+        [field]: "",
+        ...(additionalUpdates ? additionalUpdates(0) : {}),
+      });
+      return;
     }
 
-    return (
-      <div>
-        <label className="text-sm font-medium mb-1 block">Quantity*</label>
-        <Input
-          type="number"
-          value={item.quantity || ""}
-          onChange={(e) => {
-            const quantity = Number(e.target.value);
-            onItemChange(index, {
-              ...item,
-              quantity,
-              weight: undefined,
-              amount: quantity * (item.sellingPrice || 0),
-              gstAmount: (quantity * (item.sellingPrice || 0) * item.gst) / 100,
-            });
-          }}
-          min="1"
-          step="1"
-          placeholder="Enter quantity"
-        />
-        {quantityErrors[index]?.hasError && (
-          <p className="text-red-500 text-xs mt-1">
-            {quantityErrors[index].message}
-          </p>
-        )}
-      </div>
-    );
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return;
+
+    onItemChange(index, {
+      ...item,
+      [field]: numValue,
+      ...(additionalUpdates ? additionalUpdates(numValue) : {}),
+    });
+  };
+
+  // Calculate selling price and amount
+  const calculatePrices = (rate: number, margin: number, qty: number) => {
+    const sellingPrice = rate + margin;
+    const amount = qty * sellingPrice;
+    return { sellingPrice, amount };
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Get item display info
+  const getItemDisplayInfo = (product: any) => {
+    const parts = [product.name];
+    const stock = product.currentStock;
+    const unit = product.unitType === "weight" ? "kg" : "pcs";
+    return {
+      name: parts.join(" "),
+      stock: `${stock} ${unit}`,
+      purchaseRate: product.purchaseRate || 0,
+      avgRate: product.averageRate || product.purchaseRate || 0,
+    };
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      {/* Row 1: Category and Product Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Category Selector */}
         <div>
-          <label className="text-sm font-medium mb-1 block">Type*</label>
-          <Select
-            value={item.type || ""}
-            onValueChange={(value) => {
-              onItemChange(index, {
-                type: value,
-                itemId: "",
-                name: "",
-                grade: undefined,
-                size: undefined,
-                gauge: undefined,
-                subCategory: undefined,
-                specification: undefined,
-                quantity: undefined,
-                weight: undefined,
-                rate: 0,
-                margin: 0,
-                sellingPrice: 0,
-                amount: 0,
-                gst: 0,
-                gstAmount: 0,
-              });
-            }}
-          >
+          <label className="text-sm font-medium mb-1 block">Category*</label>
+          <Select value={item.type || ""} onValueChange={handleCategoryChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Select type" />
+              <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pipe">Pipe</SelectItem>
-              <SelectItem value="sheet">Sheet</SelectItem>
-              <SelectItem value="fitting">Fitting</SelectItem>
-              <SelectItem value="polish">Polish</SelectItem>
+              {ITEM_CATEGORIES.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {availableProducts.length > 0 && (
-          <div>
+        {/* Searchable Product Selector */}
+        {item.type && (
+          <div className="relative" ref={dropdownRef}>
             <label className="text-sm font-medium mb-1 block">Product*</label>
-            <Select
-              value={item.itemId || ""}
-              onValueChange={(value) => {
-                const selectedProduct = items.find((p: any) => p._id === value);
-                if (selectedProduct) {
-                  onItemChange(index, {
-                    ...item,
-                    itemId: value,
-                    name: selectedProduct.name,
-                    rate: selectedProduct.purchaseRate,
-                    gst: selectedProduct.gst,
-                    margin: 0,
-                    sellingPrice: selectedProduct.purchaseRate,
-                    amount: 0,
-                    gstAmount: 0,
-                    quantity:
-                      selectedProduct.unitType === "weight" ? undefined : 1,
-                    weight:
-                      selectedProduct.unitType === "weight" ? 0 : undefined,
-                  });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableProducts.map((product: any) => (
-                  <SelectItem key={product._id} value={product._id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder="Search products..."
+                value={item.itemId ? selectedProduct?.name || "" : searchQuery}
+                onChange={(e) => {
+                  if (item.itemId) {
+                    // Clear selection and start new search
+                    onItemChange(index, { ...item, itemId: "", name: "" });
+                  }
+                  setSearchQuery(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  setIsDropdownOpen(true);
+                  if (item.itemId) {
+                    setSearchQuery("");
+                  }
+                }}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Dropdown Results */}
+            {isDropdownOpen && !item.itemId && (
+              <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                {searchFilteredItems.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-foreground text-center">
+                    <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    {searchQuery ? "No products found" : "Start typing to search"}
+                  </div>
+                ) : (
+                  searchFilteredItems.map((product: any) => {
+                    const info = getItemDisplayInfo(product);
+                    const isLowStock = product.currentStock < product.minimumStock;
+
+                    return (
+                      <div
+                        key={product._id}
+                        className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                        onClick={() => handleItemSelect(product)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{info.name}</p>
+                            <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                              <span className={isLowStock ? "text-red-500 font-medium" : ""}>
+                                Stock: {info.stock}
+                              </span>
+                              <span>Rate: {formatCurrency(info.purchaseRate)}</span>
+                              <span>Avg: {formatCurrency(info.avgRate)}</span>
+                            </div>
+                          </div>
+                          {isLowStock && (
+                            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {item.type && renderTypeSpecificFields()}
-
-      {item.itemId && (
-        <div className="grid grid-cols-3 gap-4">
-          {renderQuantityField()}
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">Margin (%)</label>
-            <Input
-              type="number"
-              value={item.margin || 0}
-              onChange={(e) => {
-                const margin = Number(e.target.value);
-                const sellingPrice = (item.rate || 0) * (1 + margin / 100);
-                const quantity = item.weight || item.quantity || 0;
-                const amount = quantity * sellingPrice;
-                const gstAmount = (amount * item.gst) / 100;
-
-                onItemChange(index, {
-                  ...item,
-                  margin,
-                  sellingPrice,
-                  amount,
-                  gstAmount,
-                });
-              }}
-              min="0"
-              max="100"
-              step="0.01"
-              placeholder="Enter margin"
-            />
+      {/* Row 2: Product Details (read-only, auto-filled) */}
+      {selectedProduct && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-muted/30 rounded-lg">
+            {/* Show relevant attributes based on category */}
+            {(item.type === "pipe" || item.type === "sheet") && (
+              <>
+                <div>
+                  <span className="text-xs text-muted-foreground">Grade</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).grade || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Size</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).size || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Gauge</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).gauge || "-"}</p>
+                </div>
+              </>
+            )}
+            {item.type === "fitting" && (
+              <>
+                <div>
+                  <span className="text-xs text-muted-foreground">Category</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).subCategory?.replace(/_/g, " ") || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Grade</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).grade || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Size</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).size || "-"}</p>
+                </div>
+              </>
+            )}
+            {item.type === "polish" && (
+              <>
+                <div>
+                  <span className="text-xs text-muted-foreground">Type</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).type || "-"}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Specification</span>
+                  <p className="font-medium text-sm">{(selectedProduct as any).specification || "-"}</p>
+                </div>
+              </>
+            )}
+            <div>
+              <span className="text-xs text-muted-foreground">In Stock</span>
+              <p className={`font-medium text-sm ${selectedProduct.currentStock < selectedProduct.minimumStock ? "text-red-500" : "text-green-600"}`}>
+                {selectedProduct.currentStock} {selectedProduct.unitType === "weight" ? "kg" : "pcs"}
+              </p>
+            </div>
           </div>
-        </div>
+
+          {/* Row 3: Quantity/Weight and Rate */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Weight or Quantity */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {selectedProduct.unitType === "weight" ? "Weight (kg)*" : "Quantity*"}
+              </label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={selectedProduct.unitType === "weight" ? (item.weight ?? "") : (item.quantity ?? "")}
+                onChange={(e) => {
+                  const field = selectedProduct.unitType === "weight" ? "weight" : "quantity";
+                  const value = sanitizeNumericInput(e.target.value);
+
+                  if (value === "") {
+                    onItemChange(index, {
+                      ...item,
+                      [field]: "",
+                      pieces: field === "quantity" ? "" : item.pieces,
+                      amount: 0,
+                    });
+                    return;
+                  }
+
+                  const numValue = parseFloat(value);
+                  if (isNaN(numValue)) return;
+
+                  const { sellingPrice, amount } = calculatePrices(
+                    item.rate || 0,
+                    item.margin || 0,
+                    numValue
+                  );
+
+                  onItemChange(index, {
+                    ...item,
+                    [field]: numValue,
+                    pieces: field === "quantity" ? numValue : item.pieces,
+                    sellingPrice,
+                    amount,
+                  });
+                }}
+                onKeyDown={handleNumericKeyDown}
+                placeholder={`Enter ${selectedProduct.unitType === "weight" ? "weight" : "quantity"}`}
+              />
+              {quantityErrors[index]?.hasError && (
+                <p className="text-red-500 text-xs mt-1">{quantityErrors[index].message}</p>
+              )}
+            </div>
+
+            {/* Purchase Rate with info */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                Purchase Rate
+                <span className="text-xs text-muted-foreground ml-1">
+                  (Avg: {formatCurrency(selectedProduct.averageRate || selectedProduct.purchaseRate || 0)})
+                </span>
+              </label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={item.rate ?? ""}
+                onChange={(e) => {
+                  const value = sanitizeNumericInput(e.target.value);
+                  if (value === "") {
+                    onItemChange(index, { ...item, rate: "", sellingPrice: item.margin || 0, amount: 0 });
+                    return;
+                  }
+                  const rate = parseFloat(value);
+                  if (isNaN(rate)) return;
+
+                  const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
+                  const { sellingPrice, amount } = calculatePrices(rate, item.margin || 0, qty);
+
+                  onItemChange(index, { ...item, rate, sellingPrice, amount });
+                }}
+                onKeyDown={handleNumericKeyDown}
+                placeholder="Enter rate"
+              />
+            </div>
+
+            {/* Margin */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Margin (₹)</label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={item.margin ?? ""}
+                onChange={(e) => {
+                  const value = sanitizeNumericInput(e.target.value);
+                  if (value === "") {
+                    const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
+                    onItemChange(index, {
+                      ...item,
+                      margin: "",
+                      sellingPrice: item.rate || 0,
+                      amount: qty * (item.rate || 0),
+                    });
+                    return;
+                  }
+                  const margin = parseFloat(value);
+                  if (isNaN(margin)) return;
+
+                  const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
+                  const { sellingPrice, amount } = calculatePrices(item.rate || 0, margin, qty);
+
+                  onItemChange(index, { ...item, margin, sellingPrice, amount });
+                }}
+                onKeyDown={handleNumericKeyDown}
+                placeholder="Enter margin"
+              />
+            </div>
+
+            {/* Selling Price (calculated) */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Selling Price</label>
+              <Input
+                type="number"
+                value={(item.sellingPrice || 0).toFixed(2)}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          </div>
+
+          {/* Row 4: Amount */}
+          <div className="flex justify-end">
+            <div className="text-right">
+              <span className="text-sm text-muted-foreground">Amount: </span>
+              <span className="text-lg font-bold">{formatCurrency(item.amount || 0)}</span>
+            </div>
+          </div>
+        </>
       )}
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium mb-1 block">Rate</label>
-          <Input
-            type="number"
-            value={item.rate || 0}
-            onChange={(e) => {
-              const rate = Number(e.target.value);
-              const sellingPrice = rate * (1 + (item.margin || 0) / 100);
-              const quantity = item.weight || item.quantity || 0;
-              const amount = quantity * sellingPrice;
-              const gstAmount = (amount * item.gst) / 100;
-
-              onItemChange(index, {
-                ...item,
-                rate,
-                sellingPrice,
-                amount,
-                gstAmount,
-              });
-            }}
-            min="0"
-            step="0.01"
-            placeholder="Enter rate"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-1 block">GST (%)</label>
-          <Input
-            type="number"
-            value={item.gst || 0}
-            onChange={(e) => {
-              const gst = Number(e.target.value);
-              const quantity = item.weight || item.quantity || 0;
-              const amount = quantity * (item.sellingPrice || 0);
-              const gstAmount = (amount * gst) / 100;
-
-              onItemChange(index, {
-                ...item,
-                gst,
-                gstAmount,
-              });
-            }}
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder="Enter GST"
-          />
-        </div>
-      </div>
     </div>
   );
 }

@@ -52,10 +52,10 @@ export interface PurchaseFormData {
   paymentTerms: string;
   destination: string;
   vehicleNo: string;
-  freight: number;
-  tcs: number;
-  discount: number;
-  amountPaid: number;
+  freight: number | string;
+  tcs: number | string;
+  discount: number | string;
+  amountPaid: number | string;
   paymentMode: "cash" | "cheque" | "online";
   paymentReference: string;
 }
@@ -70,8 +70,6 @@ interface ProcessedItem {
   category?: string;
   rate: number;
   amount: number;
-  gst: number;
-  gstAmount: number;
   margin?: number;
   rawData: any;
   type?: string;
@@ -83,7 +81,6 @@ interface ProcessedItem {
 interface ProcessedFileData {
   items: ProcessedItem[];
   totalAmount: number;
-  totalTax: number;
   netAmount: number;
 }
 
@@ -103,6 +100,40 @@ const ITEM_TYPES = [
   { value: "polish", label: "Polish Items" },
 ];
 
+// Helper function to sanitize numeric input - only allows digits and decimal point
+const sanitizeNumericInput = (value: string): string => {
+  let sanitized = value.replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  if (parts.length > 2) {
+    sanitized = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return sanitized;
+};
+
+// Helper to prevent invalid key presses in number inputs
+const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (
+    e.key === 'Backspace' ||
+    e.key === 'Delete' ||
+    e.key === 'Tab' ||
+    e.key === 'Escape' ||
+    e.key === 'Enter' ||
+    e.key === '.' ||
+    e.key === 'ArrowLeft' ||
+    e.key === 'ArrowRight' ||
+    e.key === 'Home' ||
+    e.key === 'End'
+  ) {
+    return;
+  }
+  if (e.ctrlKey || e.metaKey) {
+    return;
+  }
+  if (!/^\d$/.test(e.key)) {
+    e.preventDefault();
+  }
+};
+
 // Updated file headers based on your CSV files
 const FILE_HEADERS = {
   pipe: [
@@ -113,8 +144,6 @@ const FILE_HEADERS = {
     "Pieces",
     "Weight",
     "Rate",
-    "GST",
-    // "Margin (%)",
   ],
   sheet: [
     "Type",
@@ -124,8 +153,6 @@ const FILE_HEADERS = {
     "Pieces",
     "Weight",
     "Rate",
-    "GST",
-    // "Margin (%)",
   ],
   fitting: [
     "Sub Category",
@@ -136,16 +163,12 @@ const FILE_HEADERS = {
     "Pieces",
     "Weight",
     "Rate",
-    "GST",
-    // "Margin (%)",
   ],
   polish: [
     "Sub Category",
     "Specification",
     "Pieces",
     "Rate",
-    "GST",
-    // "Margin (%)",
   ],
 };
 
@@ -163,7 +186,6 @@ const PurchaseModal = ({
   const [processedData, setProcessedData] = useState<{
     items: any[];
     totalAmount: number;
-    totalTax: number;
     netAmount: number;
   } | null>(null);
 
@@ -179,10 +201,10 @@ const PurchaseModal = ({
     paymentTerms: "",
     destination: "",
     vehicleNo: "",
-    freight: 0,
-    tcs: 0,
-    discount: 0,
-    amountPaid: 0,
+    freight: "",
+    tcs: "",
+    discount: "",
+    amountPaid: "",
     paymentMode: "cash",
     paymentReference: "",
   });
@@ -293,15 +315,12 @@ const PurchaseModal = ({
           const pieces = Number(row["Pieces"]) || undefined;
           const weight = Number(row["Weight"]) || undefined;
           const rate = Number(row["Rate"]) || 0;
-          const gst = Number(row["GST"]) || 0;
           const specification = row["Specification"] || "";
 
           // Calculate amount based on weight for specific items
           const amount = shouldUseWeight(itemType, row["Sub Category"])
             ? (weight || 0) * rate
             : (pieces || 0) * rate;
-
-          const gstAmount = (amount * gst) / 100;
 
           // For fitting items, store Type in a separate field
           const typeValue = itemType === "fitting" ? row["Type"] : undefined;
@@ -316,8 +335,6 @@ const PurchaseModal = ({
               category: row["Category"] || undefined,
               rate,
               amount,
-              gst,
-              gstAmount,
               rawData: row,
               type: itemType,
               subCategory: row["Sub Category"],
@@ -335,9 +352,6 @@ const PurchaseModal = ({
             category: row["Category"] || undefined,
             rate,
             amount,
-            gst,
-            gstAmount,
-            // margin: Number(row["Margin (%)"]) || 0,
             rawData: row,
             type: currentType,
             subCategory: row["Sub Category"],
@@ -350,16 +364,11 @@ const PurchaseModal = ({
           (sum, item) => sum + item.amount,
           0
         );
-        const totalTax = processedItems.reduce(
-          (sum, item) => sum + item.gstAmount,
-          0
-        );
 
         setProcessedData({
           items: processedItems,
           totalAmount,
-          totalTax,
-          netAmount: totalAmount + totalTax,
+          netAmount: totalAmount,
         });
       } catch (error) {
         console.error("Error processing file:", error);
@@ -397,16 +406,14 @@ const PurchaseModal = ({
     const discountAmount =
       (processedData.totalAmount * Number(formData.discount)) / 100;
     const afterDiscount = processedData.totalAmount - discountAmount;
-    const finalTax = processedData.totalTax;
     const freightAmount = Number(formData.freight) || 0;
     const tcsAmount = Number(formData.tcs) || 0;
-    const grandTotal = afterDiscount + finalTax + freightAmount + tcsAmount;
+    const grandTotal = afterDiscount + freightAmount + tcsAmount;
     const balance = grandTotal - Number(formData.amountPaid);
 
     return {
       discountAmount,
       afterDiscount,
-      finalTax,
       freightAmount,
       tcsAmount,
       grandTotal,
@@ -462,8 +469,6 @@ const PurchaseModal = ({
           weight: item.weight,
           rate: item.rate,
           amount: item.amount,
-          gst: item.gst,
-          gstAmount: item.gstAmount,
           margin: item.margin || 0,
         };
 
@@ -509,12 +514,11 @@ const PurchaseModal = ({
         vehicleNo: formData.vehicleNo,
         items: transformedItems,
         discount: Number(formData.discount),
-        taxableAmount: processedData.totalAmount,
+        totalAmount: processedData.totalAmount,
         discountAmount: calculations.discountAmount,
-        totalTax: processedData.totalTax,
         grandTotal: calculations.grandTotal,
         payments:
-          formData.amountPaid > 0
+          Number(formData.amountPaid) > 0
             ? [
                 {
                   amount: Number(formData.amountPaid),
@@ -529,9 +533,9 @@ const PurchaseModal = ({
 
       const response = await createPurchase({
         ...purchaseData,
-        freight: formData.freight,
-        tcs: formData.tcs,
-        amountPaid: formData.amountPaid,
+        freight: Number(formData.freight) || 0,
+        tcs: Number(formData.tcs) || 0,
+        amountPaid: Number(formData.amountPaid) || 0,
         paymentMode: formData.paymentMode,
         paymentReference: formData.paymentReference,
       });
@@ -558,10 +562,10 @@ const PurchaseModal = ({
       paymentTerms: "",
       destination: "",
       vehicleNo: "",
-      freight: 0,
-      tcs: 0,
-      discount: 0,
-      amountPaid: 0,
+      freight: "",
+      tcs: "",
+      discount: "",
+      amountPaid: "",
       paymentMode: "cash",
       paymentReference: "",
     });
@@ -621,12 +625,6 @@ const PurchaseModal = ({
       </TableHead>,
       <TableHead key="amount" className="text-right">
         Amount
-      </TableHead>,
-      <TableHead key="gst" className="text-right">
-        GST %
-      </TableHead>,
-      <TableHead key="gstAmount" className="text-right">
-        GST Amount
       </TableHead>
     );
 
@@ -684,12 +682,6 @@ const PurchaseModal = ({
       </TableCell>,
       <TableCell key="amount" className="text-right">
         {formatCurrency(item.amount)}
-      </TableCell>,
-      <TableCell key="gst" className="text-right">
-        {item.gst}%
-      </TableCell>,
-      <TableCell key="gstAmount" className="text-right">
-        {formatCurrency(item.gstAmount)}
       </TableCell>
     );
 
@@ -908,15 +900,11 @@ const PurchaseModal = ({
                           </TableRow>
                         ))}
                         <TableRow className="font-medium">
-                          <TableCell colSpan={renderTableColumns().length - 3}>
+                          <TableCell colSpan={renderTableColumns().length - 1}>
                             Total
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(processedData.totalAmount)}
-                          </TableCell>
-                          <TableCell></TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(processedData.totalTax)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -937,11 +925,13 @@ const PurchaseModal = ({
                   Extra Discount (%)
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   name="discount"
-                  placeholder="0.00"
+                  placeholder="0"
                   value={formData.discount}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, discount: sanitizeNumericInput(e.target.value) }))}
+                  onKeyDown={handleNumericKeyDown}
                 />
               </div>
               <div>
@@ -949,11 +939,13 @@ const PurchaseModal = ({
                   Amount Paid
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   name="amountPaid"
-                  placeholder="0.00"
+                  placeholder="0"
                   value={formData.amountPaid}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, amountPaid: sanitizeNumericInput(e.target.value) }))}
+                  onKeyDown={handleNumericKeyDown}
                 />
               </div>
               <div>
@@ -1010,12 +1002,13 @@ const PurchaseModal = ({
                   Freight
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   name="freight"
-                  placeholder="0.00"
+                  placeholder="0"
                   value={formData.freight}
-                  onChange={handleInputChange}
-                  min="0"
+                  onChange={(e) => setFormData((prev) => ({ ...prev, freight: sanitizeNumericInput(e.target.value) }))}
+                  onKeyDown={handleNumericKeyDown}
                 />
               </div>
 
@@ -1024,12 +1017,13 @@ const PurchaseModal = ({
                   TCS Amount
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   name="tcs"
-                  placeholder="0.00"
+                  placeholder="0"
                   value={formData.tcs}
-                  onChange={handleInputChange}
-                  min="0"
+                  onChange={(e) => setFormData((prev) => ({ ...prev, tcs: sanitizeNumericInput(e.target.value) }))}
+                  onKeyDown={handleNumericKeyDown}
                 />
               </div>
             </div>

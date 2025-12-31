@@ -242,9 +242,10 @@ export default function CustomersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="group"
                             onClick={() => handleViewLedger(customer._id)}
                           >
-                            <FileText className="h-4 w-4 " />
+                            <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           </Button>
                         </div>
                       </td>

@@ -43,19 +43,18 @@ interface ItemFormData {
   itemType: ItemType;
   name: string;
   code: string;
-  currentStock: number;
-  minimumStock: number;
-  purchaseRate: number;
-  sellingRate: number;
-  margin: number;
-  gst: number;
+  currentStock: number | string;
+  minimumStock: number | string;
+  purchaseRate: number | string;
+  sellingRate: number | string;
+  margin: number | string;
   unitType: "weight" | "pieces";
   // Type specific fields
   type: string;
   grade: string | "304" | "202";
   size: string;
   gauge: string;
-  weight: number;
+  weight: number | string;
   subCategory: string;
   specification: string;
   variant: string;
@@ -74,19 +73,18 @@ export default function ItemForm({
     itemType,
     name: initialData?.name || "",
     code: initialData?.code || "",
-    currentStock: initialData?.currentStock || 0,
-    minimumStock: initialData?.minimumStock || 0,
-    purchaseRate: initialData?.purchaseRate || 0,
-    sellingRate: initialData?.sellingRate || 0,
-    margin: initialData?.margin || 0,
-    gst: initialData?.gst || 0,
+    currentStock: initialData?.currentStock ?? "",
+    minimumStock: initialData?.minimumStock ?? "",
+    purchaseRate: initialData?.purchaseRate ?? "",
+    sellingRate: initialData?.sellingRate ?? "",
+    margin: initialData?.margin ?? "",
     unitType: initialData?.unitType || "pieces",
     // Type specific fields
     type: initialData?.type || "",
     grade: (initialData as any)?.grade || "304",
     size: initialData?.size || "",
     gauge: (initialData as any)?.gauge || "",
-    weight: (initialData as any)?.weight || 0,
+    weight: (initialData as any)?.weight ?? "",
     subCategory: (initialData as any)?.subCategory || "",
     specification: (initialData as any)?.specification || "",
     variant: (initialData as any)?.variant || null,
@@ -345,9 +343,9 @@ export default function ItemForm({
             type="number"
             value={formData.currentStock}
             onChange={(e) =>
-              setFormData({ ...formData, currentStock: Number(e.target.value) })
+              setFormData({ ...formData, currentStock: e.target.value })
             }
-            // required
+            placeholder="Enter stock"
           />
         </div>
         <div className="space-y-2">
@@ -356,9 +354,9 @@ export default function ItemForm({
             type="number"
             value={formData.minimumStock}
             onChange={(e) =>
-              setFormData({ ...formData, minimumStock: Number(e.target.value) })
+              setFormData({ ...formData, minimumStock: e.target.value })
             }
-            // required
+            placeholder="Enter minimum stock"
           />
         </div>
         <div className="space-y-2">
@@ -367,25 +365,23 @@ export default function ItemForm({
             type="number"
             value={formData.purchaseRate}
             onChange={(e) =>
-              setFormData({ ...formData, purchaseRate: Number(e.target.value) })
+              setFormData({ ...formData, purchaseRate: e.target.value })
             }
-            // required
+            placeholder="Enter rate"
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Selling Rate</label>
           <Input
             type="number"
-            value={Number(formData.sellingRate)
-              .toFixed(2)
-              .replace(/[.,]00$/, "")}
+            value={formData.sellingRate}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                sellingRate: Number(e.target.value),
+                sellingRate: e.target.value,
               })
             }
-            // required
+            placeholder="Enter selling rate"
           />
         </div>
       </div>

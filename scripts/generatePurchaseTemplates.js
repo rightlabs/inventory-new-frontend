@@ -13,13 +13,13 @@ const fittingSubCategories = [
   'gate_wheel', 'gate_opener'
 ];
 
-// Generate Sales Pipe/Sheet Template
+// Generate Purchase Pipe/Sheet Template
 async function generatePipeSheetTemplate() {
   const workbook = await XlsxPopulate.fromBlankAsync();
-  const sheet = workbook.sheet(0).name('Sales Items');
+  const sheet = workbook.sheet(0).name('Pipe Sheet Items');
 
   // Headers
-  const headers = ['Type', 'Grade', 'Size', 'Guage', 'Pieces', 'Weight', 'Rate', 'Margin'];
+  const headers = ['Type', 'Grade', 'Size', 'Guage', 'Pieces', 'Weight', 'Rate', 'Margin (%)'];
   headers.forEach((header, i) => {
     sheet.cell(1, i + 1).value(header).style({ bold: true });
   });
@@ -32,7 +32,7 @@ async function generatePipeSheetTemplate() {
   sheet.cell(2, 5).value(10);
   sheet.cell(2, 6).value(50);
   sheet.cell(2, 7).value(120);
-  sheet.cell(2, 8).value(18); // Absolute margin value
+  sheet.cell(2, 8).value(10);
 
   // Sample data row 2
   sheet.cell(3, 1).value('Sheet');
@@ -42,7 +42,7 @@ async function generatePipeSheetTemplate() {
   sheet.cell(3, 5).value(5);
   sheet.cell(3, 6).value(100);
   sheet.cell(3, 7).value(150);
-  sheet.cell(3, 8).value(30); // Absolute margin value
+  sheet.cell(3, 8).value(12);
 
   // Add dropdown validations for rows 2-1000
   // Column A = Type (Pipe, Sheet)
@@ -66,18 +66,18 @@ async function generatePipeSheetTemplate() {
     formula1: '"None,16G,14G,18G,20G"'
   });
 
-  const filePath = path.join(publicDir, 'Sales-Pipe_Sheet.xlsx');
+  const filePath = path.join(publicDir, 'Items-Pipe_Sheet.xlsx');
   await workbook.toFileAsync(filePath);
   console.log('Created:', filePath);
 }
 
-// Generate Sales Fitting Template
+// Generate Purchase Fitting Template
 async function generateFittingTemplate() {
   const workbook = await XlsxPopulate.fromBlankAsync();
   const sheet = workbook.sheet(0).name('Fitting Items');
 
   // Headers
-  const headers = ['Sub Category', 'Type', 'Size', 'Grade', 'Pieces', 'Weight', 'Rate', 'Margin'];
+  const headers = ['Sub Category', 'Type', 'Size', 'Grade', 'Pieces', 'Weight', 'Rate', 'Margin (%)'];
   headers.forEach((header, i) => {
     sheet.cell(1, i + 1).value(header).style({ bold: true });
   });
@@ -90,7 +90,7 @@ async function generateFittingTemplate() {
   sheet.cell(2, 5).value(20);
   sheet.cell(2, 6).value(10);
   sheet.cell(2, 7).value(80);
-  sheet.cell(2, 8).value(20); // Absolute margin value
+  sheet.cell(2, 8).value(15);
 
   // Sample data row 2
   sheet.cell(3, 1).value('bush');
@@ -100,7 +100,7 @@ async function generateFittingTemplate() {
   sheet.cell(3, 5).value(15);
   sheet.cell(3, 6).value(8);
   sheet.cell(3, 7).value(100);
-  sheet.cell(3, 8).value(20); // Absolute margin value
+  sheet.cell(3, 8).value(15);
 
   // Add dropdown validations
   // Column A = Sub Category
@@ -124,7 +124,7 @@ async function generateFittingTemplate() {
     formula1: '"304,202"'
   });
 
-  const filePath = path.join(publicDir, 'Sales-Fitting.xlsx');
+  const filePath = path.join(publicDir, 'Items-Fitting.xlsx');
   await workbook.toFileAsync(filePath);
   console.log('Created:', filePath);
 }
@@ -135,13 +135,13 @@ const polishSubCategories = [
   'Welding Rod', 'Polish', 'Grinding Wheel', 'Core Bit'
 ];
 
-// Generate Sales Polish Items Template
+// Generate Purchase Polish Items Template
 async function generatePolishTemplate() {
   const workbook = await XlsxPopulate.fromBlankAsync();
   const sheet = workbook.sheet(0).name('Polish Items');
 
   // Headers (no Variant column - matching original template)
-  const headers = ['Sub Category', 'Specification', 'Pieces', 'Rate', 'Margin'];
+  const headers = ['Sub Category', 'Specification', 'Pieces', 'Rate', 'Margin (%)'];
   headers.forEach((header, i) => {
     sheet.cell(1, i + 1).value(header).style({ bold: true });
   });
@@ -151,14 +151,14 @@ async function generatePolishTemplate() {
   sheet.cell(2, 2).value('4 inch');
   sheet.cell(2, 3).value(10);
   sheet.cell(2, 4).value(200);
-  sheet.cell(2, 5).value(60); // Absolute margin value
+  sheet.cell(2, 5).value(20);
 
   // Sample data row 2
   sheet.cell(3, 1).value('Cutting Blade');
   sheet.cell(3, 2).value('14 inch');
   sheet.cell(3, 3).value(25);
   sheet.cell(3, 4).value(180);
-  sheet.cell(3, 5).value(45); // Absolute margin value
+  sheet.cell(3, 5).value(18);
 
   // Add dropdown validations
   // Column A = Sub Category
@@ -168,18 +168,18 @@ async function generatePolishTemplate() {
     formula1: `"${polishSubCategories.join(',')}"`
   });
 
-  const filePath = path.join(publicDir, 'Sales-Polish Items.xlsx');
+  const filePath = path.join(publicDir, 'Items-Polish Items.xlsx');
   await workbook.toFileAsync(filePath);
   console.log('Created:', filePath);
 }
 
 // Generate all templates
 async function generateAll() {
-  console.log('Generating Sales Excel Templates (with dropdowns, without GST)...');
+  console.log('Generating Purchase Excel Templates (with dropdowns, without GST)...');
   await generatePipeSheetTemplate();
   await generateFittingTemplate();
   await generatePolishTemplate();
-  console.log('All sales templates generated successfully!');
+  console.log('All purchase templates generated successfully!');
 }
 
 generateAll().catch(console.error);

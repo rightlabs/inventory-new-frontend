@@ -87,3 +87,12 @@ export const getItemHistory = async (
     throw error;
   }
 };
+
+export const getPurchaseHistory = async (itemId: string) => {
+  try {
+    const res = await API_INSTANCE.get(`/items/${itemId}/purchase-history`);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};

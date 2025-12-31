@@ -12,47 +12,55 @@ import {
   Warehouse,
 } from "lucide-react";
 import LogoutButton from "./logout-button";
+import { useUser } from "@/contexts/userContext";
 
 const routes = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
     href: "/dashboard",
+    roles: ["admin"], // Only admin can see dashboard
   },
   {
     label: "Purchases",
     icon: ShoppingCart,
     href: "/purchase",
+    roles: ["admin", "sales"],
   },
   {
     label: "Vendors",
-    icon: Building2, // Changed to represent business entities
+    icon: Building2,
     href: "/vendors",
+    roles: ["admin", "sales"],
   },
   {
     label: "Sales Orders",
-    icon: IndianRupee, // Changed to Indian Rupee symbol
+    icon: IndianRupee,
     href: "/sales",
+    roles: ["admin", "sales"],
   },
   {
     label: "Customers",
-    icon: Store, // Changed to represent retail/business customers
+    icon: Store,
     href: "/customers",
+    roles: ["admin", "sales"],
   },
   {
     label: "Inventory",
-    icon: Warehouse, // Changed to better represent inventory storage
+    icon: Warehouse,
     href: "/inventory",
+    roles: ["admin", "sales"],
   },
-  // {
-  //   label: "Analytics",
-  //   icon: BarChart3,
-  //   href: "/analytics",
-  // },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+
+  // Filter routes based on user role
+  const filteredRoutes = routes.filter(
+    (route) => !user?.role || route.roles.includes(user.role)
+  );
 
   return (
     <div className="flex flex-col h-full w-64 bg-[#F8FAFC] border-r border-gray-200">
@@ -62,7 +70,7 @@ export function Sidebar() {
         </h1>
       </div>
       <div className="flex-1 px-3 flex flex-col gap-y-5">
-        {routes.map((route) => (
+        {filteredRoutes.map((route) => (
           <Link
             key={route.href}
             href={route.href}
