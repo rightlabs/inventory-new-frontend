@@ -425,9 +425,13 @@ export default function ItemSelection({
                     numValue
                   );
 
+                  // Keep as string if user is still typing decimals (ends with . or trailing 0 after decimal)
+                  const preserveAsString = value.endsWith('.') || (value.includes('.') && value.endsWith('0'));
+                  const valueToStore = preserveAsString ? value : numValue;
+
                   onItemChange(index, {
                     ...item,
-                    [field]: numValue,
+                    [field]: valueToStore,
                     pieces: field === "quantity" ? numValue : item.pieces,
                     sellingPrice,
                     amount,
@@ -462,10 +466,14 @@ export default function ItemSelection({
                   const rate = parseFloat(value);
                   if (isNaN(rate)) return;
 
-                  const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
+                  const qty = selectedProduct.unitType === "weight" ? (parseFloat(String(item.weight)) || 0) : (parseFloat(String(item.quantity)) || 0);
                   const { sellingPrice, amount } = calculatePrices(rate, item.margin || 0, qty);
 
-                  onItemChange(index, { ...item, rate, sellingPrice, amount });
+                  // Keep as string if user is still typing decimals (ends with . or trailing 0 after decimal)
+                  const preserveAsString = value.endsWith('.') || (value.includes('.') && value.endsWith('0'));
+                  const rateToStore = preserveAsString ? value : rate;
+
+                  onItemChange(index, { ...item, rate: rateToStore, sellingPrice, amount });
                 }}
                 onKeyDown={handleNumericKeyDown}
                 placeholder="Enter rate"
@@ -482,22 +490,26 @@ export default function ItemSelection({
                 onChange={(e) => {
                   const value = sanitizeNumericInput(e.target.value);
                   if (value === "") {
-                    const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
+                    const qty = selectedProduct.unitType === "weight" ? (parseFloat(String(item.weight)) || 0) : (parseFloat(String(item.quantity)) || 0);
                     onItemChange(index, {
                       ...item,
                       margin: "",
-                      sellingPrice: item.rate || 0,
-                      amount: qty * (item.rate || 0),
+                      sellingPrice: parseFloat(String(item.rate)) || 0,
+                      amount: qty * (parseFloat(String(item.rate)) || 0),
                     });
                     return;
                   }
                   const margin = parseFloat(value);
                   if (isNaN(margin)) return;
 
-                  const qty = selectedProduct.unitType === "weight" ? (item.weight || 0) : (item.quantity || 0);
-                  const { sellingPrice, amount } = calculatePrices(item.rate || 0, margin, qty);
+                  const qty = selectedProduct.unitType === "weight" ? (parseFloat(String(item.weight)) || 0) : (parseFloat(String(item.quantity)) || 0);
+                  const { sellingPrice, amount } = calculatePrices(parseFloat(String(item.rate)) || 0, margin, qty);
 
-                  onItemChange(index, { ...item, margin, sellingPrice, amount });
+                  // Keep as string if user is still typing decimals (ends with . or trailing 0 after decimal)
+                  const preserveAsString = value.endsWith('.') || (value.includes('.') && value.endsWith('0'));
+                  const marginToStore = preserveAsString ? value : margin;
+
+                  onItemChange(index, { ...item, margin: marginToStore, sellingPrice, amount });
                 }}
                 onKeyDown={handleNumericKeyDown}
                 placeholder="Enter margin"
