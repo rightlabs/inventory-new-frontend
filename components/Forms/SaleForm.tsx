@@ -459,12 +459,12 @@ export default function SalesForm({
         </div>
 
         {/* Items Section */}
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Items</h3>
-            <Button onClick={addItem} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Item
-            </Button>
+            {selectedItems.length > 0 && (
+              <span className="text-sm text-muted-foreground">{selectedItems.length} item(s)</span>
+            )}
           </div>
 
           {/* Item Cards */}
@@ -494,9 +494,18 @@ export default function SalesForm({
 
           {selectedItems.length === 0 && (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              <p className="mb-2">No items added yet</p>
-              <Button onClick={addItem} variant="outline" size="sm">
+              <p className="mb-4">No items added yet</p>
+              <Button onClick={addItem} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> Add Your First Item
+              </Button>
+            </div>
+          )}
+
+          {/* Floating Add Item Button - shown when items exist */}
+          {selectedItems.length > 0 && (
+            <div className="flex justify-center pt-2">
+              <Button onClick={addItem} className="bg-primary hover:bg-primary/90 shadow-lg">
+                <Plus className="h-4 w-4 mr-2" /> Add Another Item
               </Button>
             </div>
           )}
