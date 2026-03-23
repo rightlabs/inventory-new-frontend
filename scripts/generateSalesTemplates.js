@@ -10,7 +10,7 @@ const fittingSubCategories = [
   'master_pillar', 'starwindow', 'butterfly', 'gamla', 'step', 'baind',
   'star_ring', 'ring', 'bhala', 'braket', 'ground_braket', 'om',
   'swastik', 'shubh_labh', 'mel_femel_nut', 'flower', 'bail',
-  'gate_wheel', 'gate_opener'
+  'gate_wheel', 'gate_opener', 'kancha', 'besh', 'pendi'
 ];
 
 // Generate Sales Pipe/Sheet Template
@@ -132,7 +132,7 @@ async function generateFittingTemplate() {
 // Polish subcategories list
 const polishSubCategories = [
   'Flap Disc', 'Non Woven Pad', 'Felt buff Pad', 'Cutting Blade',
-  'Welding Rod', 'Polish', 'Grinding Wheel', 'Core Bit'
+  'Welding Rod', 'Polish', 'Grinding Wheel', 'Core Bit', 'Spray'
 ];
 
 // Generate Sales Polish Items Template

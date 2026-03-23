@@ -156,10 +156,9 @@ const FILE_HEADERS = {
   ],
   fitting: [
     "Sub Category",
-    "Grade",
     "Type",
     "Size",
-    "Category",
+    "Grade",
     "Pieces",
     "Weight",
     "Rate",
@@ -325,6 +324,8 @@ const PurchaseModal = ({
           // For fitting items, store Type in a separate field
           const typeValue = itemType === "fitting" ? row["Type"] : undefined;
 
+          const margin = Number(row["Margin (%)"]) || 0;
+
           if (itemType === "fitting") {
             return {
               name,
@@ -335,6 +336,7 @@ const PurchaseModal = ({
               category: row["Category"] || undefined,
               rate,
               amount,
+              margin,
               rawData: row,
               type: itemType,
               subCategory: row["Sub Category"],
@@ -352,6 +354,7 @@ const PurchaseModal = ({
             category: row["Category"] || undefined,
             rate,
             amount,
+            margin,
             rawData: row,
             type: currentType,
             subCategory: row["Sub Category"],

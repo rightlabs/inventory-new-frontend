@@ -26,7 +26,7 @@ function StatsCard({
           <div className="flex flex-col gap-1">
             <div className="flex items-baseline gap-2">
               <h3 className="text-3xl font-semibold text-gray-900">
-                ₹
+                {isNegative ? "-" : ""}₹
                 {Math.abs(amount).toLocaleString("en-IN", {
                   maximumFractionDigits: 2,
                   minimumFractionDigits: 2,
@@ -84,7 +84,7 @@ export function StatsCards({ metrics }: { metrics: DashboardMetrics }) {
         todayAmount={metrics.totalPurchase.todayAmount}
       />
       <StatsCard
-        title="Gross Profits"
+        title={metrics.grossProfits.total >= 0 ? "Gross Profit" : "Gross Loss"}
         amount={metrics.grossProfits.total}
         percentageChange={metrics.grossProfits.percentageChange}
         todayAmount={metrics.grossProfits.todayAmount}
