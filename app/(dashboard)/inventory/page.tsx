@@ -71,6 +71,9 @@ const FITTING_SUBCATEGORIES = [
   "bail",
   "gate_wheel",
   "gate_opener",
+  "kancha",
+  "besh",
+  "pendi",
 ];
 
 const POLISH_SUBCATEGORIES = [
@@ -82,6 +85,7 @@ const POLISH_SUBCATEGORIES = [
   "Polish",
   "Grinding Wheel",
   "Core Bit",
+  "Spray",
 ].sort();
 
 const GRADES = ["304", "202"];
@@ -269,7 +273,7 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.gauge}</td>
               <td className="p-4 align-middle text-right">{item.pieces}</td>
               <td className="p-4 align-middle text-right">
-                {item.currentStock} ({item.unitType})
+                {Number(item.currentStock).toFixed(2).replace(/[.,]00$/, "")} ({item.unitType})
               </td>
               <td className="p-4 align-middle text-right">
                 ₹{item.purchaseRate.toFixed(2)}
@@ -560,7 +564,7 @@ export default function ItemsPage() {
 
     return (
       <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
+        className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
       >
         {labels[status]}
       </span>
