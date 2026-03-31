@@ -10,14 +10,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, Wallet } from "lucide-react";
+import { Download, Plus, Undo2, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
 import { getCustomers } from "@/api/customer";
 import { Customer, Sale } from "@/types/type";
-import { downloadSaleInvoice, getSales } from "@/api/sale";
+import { downloadSaleInvoice, getSaleDetails, getSales } from "@/api/sale";
 import { getItems } from "@/api/items";
 import SaleForm from "@/components/Forms/SaleForm";
 import PaymentModal from "@/components/Forms/PaymentModal";
+import ReturnItemsModal from "@/components/Sale/ReturnItemsModal";
 
 export default function SalesPage() {
   const [open, setOpen] = useState(false);
@@ -27,6 +28,8 @@ export default function SalesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [selectedSaleForReturn, setSelectedSaleForReturn] = useState<Sale | null>(null);
 
   const fetchCustomers = async () => {
     try {
@@ -68,10 +71,23 @@ export default function SalesPage() {
     Promise.all([fetchCustomers(), fetchSales(), fetchItems()]);
   }, []);
 
+  const handleReturnClick = async (sale: Sale) => {
+    try {
+      const response = await getSaleDetails(sale._id);
+      if (response?.data?.statusCode === 200) {
+        setSelectedSaleForReturn(response.data.data);
+        setShowReturnModal(true);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch sale details");
+    }
+  };
+
   const StatusBadge = ({ status }: { status: Sale["status"] }) => {
-    const styles = {
+    const styles: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800",
       delivered: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
     };
 
     return (
@@ -221,9 +237,9 @@ export default function SalesPage() {
                     <th className="h-12 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Balance
                     </th>
-                    {/* <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
+                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Status
-                    </th> */}
+                    </th>
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Payment
                     </th>
@@ -262,9 +278,9 @@ export default function SalesPage() {
                       <td className="p-4 align-middle text-center">
                         ₹{sale.balanceAmount.toLocaleString()}
                       </td>
-                      {/* <td className="p-4 align-middle">
+                      <td className="p-4 align-middle">
                         <StatusBadge status={sale.status} />
-                      </td> */}
+                      </td>
                       <td className="p-4 align-middle">
                         <PaymentBadge status={sale.paymentStatus} />
                       </td>
@@ -288,6 +304,16 @@ export default function SalesPage() {
                             title="Download Invoice"
                           >
                             <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group hover:bg-orange-50"
+                            onClick={() => handleReturnClick(sale)}
+                            disabled={sale.status === "cancelled"}
+                            title="Return / Cancel"
+                          >
+                            <Undo2 className="h-4 w-4 text-muted-foreground group-hover:text-orange-600" />
                           </Button>
                         </div>
                       </td>
@@ -320,6 +346,21 @@ export default function SalesPage() {
             onSuccess={() => {
               fetchSales();
               setSelectedSale(null);
+            }}
+          />
+        </Dialog>
+      )}
+
+      {/* Return/Cancel Modal */}
+      {selectedSaleForReturn && (
+        <Dialog open={showReturnModal} onOpenChange={setShowReturnModal}>
+          <ReturnItemsModal
+            open={showReturnModal}
+            onOpenChange={setShowReturnModal}
+            sale={selectedSaleForReturn}
+            onSuccess={() => {
+              fetchSales();
+              setSelectedSaleForReturn(null);
             }}
           />
         </Dialog>

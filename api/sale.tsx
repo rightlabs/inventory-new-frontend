@@ -74,3 +74,27 @@ export const downloadSaleInvoice = async (saleId: string) => {
     responseType: "blob",
   });
 };
+
+export const cancelSale = async (saleId: string, reason?: string) => {
+  try {
+    const res = await API_INSTANCE.post(`/sale/${saleId}/cancel`, { reason });
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const returnSaleItems = async (
+  saleId: string,
+  data: {
+    items: { itemIndex: number; quantity: number }[];
+    reason?: string;
+  }
+) => {
+  try {
+    const res = await API_INSTANCE.post(`/sale/${saleId}/return-items`, data);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};

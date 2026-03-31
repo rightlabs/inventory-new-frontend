@@ -108,6 +108,7 @@ export default function SalesForm({
   const [quantityErrors, setQuantityErrors] = useState<{
     [key: number]: QuantityError;
   }>({});
+  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
     date: new Date(),
@@ -246,42 +247,45 @@ export default function SalesForm({
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      const missingFields = [];
-      if (!formData.customerId) missingFields.push("customer");
-      if (!formData.date) missingFields.push("date");
-      if (selectedItems.length === 0) missingFields.push("items");
+  const handleSubmit = () => {
+    const missingFields = [];
+    if (!formData.customerId) missingFields.push("customer");
+    if (!formData.date) missingFields.push("date");
+    if (selectedItems.length === 0) missingFields.push("items");
 
-      // Check if all items have required fields
-      const incompleteItems = selectedItems.filter(
-        (item) => !item.itemId || (!item.quantity && !item.weight)
+    const incompleteItems = selectedItems.filter(
+      (item) => !item.itemId || (!item.quantity && !item.weight)
+    );
+    if (incompleteItems.length > 0) {
+      missingFields.push("item details");
+    }
+
+    if (missingFields.length > 0) {
+      toast.error(
+        `Please fill in the following required field${
+          missingFields.length > 1 ? "s" : ""
+        }: ${missingFields.join(", ")}`
       );
-      if (incompleteItems.length > 0) {
-        missingFields.push("item details");
-      }
+      return;
+    }
 
-      if (missingFields.length > 0) {
-        toast.error(
-          `Please fill in the following required field${
-            missingFields.length > 1 ? "s" : ""
-          }: ${missingFields.join(", ")}`
-        );
-        return;
-      }
+    const calculations = calculateTotals();
 
+    if (selectedCustomer) {
+      const potentialNewBalance = selectedCustomer.currentBalance + calculations.balance;
+      if (selectedCustomer.creditLimit === 0) {
+        toast("Note: Customer has no credit limit set", { icon: "ℹ️" });
+      } else if (potentialNewBalance > selectedCustomer.creditLimit) {
+        toast("Warning: This sale exceeds the customer's credit limit", { icon: "⚠️" });
+      }
+    }
+
+    setShowPreview(true);
+  };
+
+  const handleConfirmSale = async () => {
+    try {
       const calculations = calculateTotals();
-
-      // Show warning if credit limit will be exceeded, but don't block the sale
-      if (selectedCustomer) {
-        const potentialNewBalance = selectedCustomer.currentBalance + calculations.balance;
-        if (selectedCustomer.creditLimit === 0) {
-          toast("Note: Customer has no credit limit set", { icon: "ℹ️" });
-        } else if (potentialNewBalance > selectedCustomer.creditLimit) {
-          toast("Warning: This sale exceeds the customer's credit limit", { icon: "⚠️" });
-        }
-      }
-
       const amountPaidValue = Number(formData.amountPaid) || 0;
 
       const saleData = {
@@ -346,6 +350,7 @@ export default function SalesForm({
     setSelectedItems([]);
     setSelectedCustomer(null);
     setQuantityErrors({});
+    setShowPreview(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -358,238 +363,72 @@ export default function SalesForm({
 
   return (
     <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>Create New Sale</DialogTitle>
-      </DialogHeader>
+      {showPreview ? (
+        <>
+          <DialogHeader>
+            <DialogTitle>Review Sale</DialogTitle>
+          </DialogHeader>
 
-      <div className="grid gap-6 py-4">
-        {/* Customer Selection */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium mb-1 block">Customer*</label>
-            <div className="flex gap-2">
-              <Select value={formData.customerId} onValueChange={handleCustomerSelect}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer._id} value={customer._id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Dialog open={customerOpen} onOpenChange={setCustomerOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Customer</DialogTitle>
-                  </DialogHeader>
-                  <CustomerForm
-                    onSuccess={() => {
-                      setCustomerOpen(false);
-                      fetchCustomers();
-                    }}
-                    onCancel={() => setCustomerOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-            {selectedCustomer && (
-              <div className="text-sm bg-muted/50 p-2 rounded">
-                <p>
-                  Credit Limit: {formatCurrency(selectedCustomer?.creditLimit || 0)}
-                </p>
-                <p>
-                  Current Balance: {formatCurrency(selectedCustomer?.currentBalance || 0)}
-                </p>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => handleViewLedger(selectedCustomer?._id)}
-                  className="p-0 h-auto"
-                >
-                  View Ledger
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">Sale Date*</label>
-            <DatePicker
-              date={formData.date}
-              onDateChange={(date) => {
-                if (date) {
-                  setFormData((prev) => ({ ...prev, date }));
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Basic Details */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Delivery Address</label>
-            <Input
-              value={formData.deliveryAddress}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  deliveryAddress: e.target.value,
-                }))
-              }
-              placeholder="Enter delivery address"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Vehicle No.</label>
-            <Input
-              value={formData.vehicleNo}
-              onChange={(e) => setFormData((prev) => ({ ...prev, vehicleNo: e.target.value }))}
-              placeholder="Enter vehicle number"
-            />
-          </div>
-        </div>
-
-        {/* Items Section */}
-        <div className="space-y-4 relative">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Items</h3>
-            {selectedItems.length > 0 && (
-              <span className="text-sm text-muted-foreground">{selectedItems.length} item(s)</span>
-            )}
-          </div>
-
-          {/* Item Cards */}
-          {selectedItems.map((item, index) => (
-            <div key={index} className="border p-4 rounded-lg space-y-4 bg-white">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium text-sm text-muted-foreground">Item {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <ItemSelection
-                item={item}
-                index={index}
-                items={items}
-                onItemChange={handleItemChange}
-                quantityErrors={quantityErrors}
-              />
-            </div>
-          ))}
-
-          {selectedItems.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              <p className="mb-4">No items added yet</p>
-              <Button onClick={addItem} className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4 mr-2" /> Add Your First Item
-              </Button>
-            </div>
-          )}
-
-          {/* Floating Add Item Button - shown when items exist */}
-          {selectedItems.length > 0 && (
-            <div className="flex justify-center pt-2">
-              <Button onClick={addItem} className="bg-primary hover:bg-primary/90 shadow-lg">
-                <Plus className="h-4 w-4 mr-2" /> Add Another Item
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Payment Section */}
-        {selectedItems.length > 0 && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 py-4">
+            {/* Customer & Date Info */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
               <div>
-                <label className="text-sm font-medium mb-1 block">Discount (%)</label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={formData.discount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      discount: sanitizeNumericInput(e.target.value),
-                    }))
-                  }
-                  onKeyDown={handleNumericKeyDown}
-                  placeholder="0"
-                />
+                <span className="text-xs text-muted-foreground">Customer</span>
+                <p className="font-medium">{selectedCustomer?.name}</p>
               </div>
-
               <div>
-                <label className="text-sm font-medium mb-1 block">Amount Paid</label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={formData.amountPaid}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      amountPaid: sanitizeNumericInput(e.target.value),
-                    }))
-                  }
-                  onKeyDown={handleNumericKeyDown}
-                  placeholder="0"
-                />
+                <span className="text-xs text-muted-foreground">Date</span>
+                <p className="font-medium">
+                  {formData.date.toLocaleDateString("en-IN")}
+                </p>
               </div>
-
-              {Number(formData.amountPaid) > 0 && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Payment Mode</label>
-                    <Select
-                      value={formData.paymentMode}
-                      onValueChange={(value: "cash" | "cheque" | "online") =>
-                        setFormData((prev) => ({ ...prev, paymentMode: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="cheque">Cheque</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {formData.paymentMode !== "cash" && (
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Reference Number</label>
-                      <Input
-                        value={formData.paymentReference}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            paymentReference: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter reference number"
-                      />
-                    </div>
-                  )}
-                </>
+              {formData.deliveryAddress && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Delivery Address</span>
+                  <p className="font-medium">{formData.deliveryAddress}</p>
+                </div>
+              )}
+              {formData.vehicleNo && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Vehicle No.</span>
+                  <p className="font-medium">{formData.vehicleNo}</p>
+                </div>
               )}
             </div>
 
-            {/* Summary */}
+            {/* Items Table */}
+            <div className="rounded-md border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left text-sm font-medium">#</th>
+                    <th className="p-3 text-left text-sm font-medium">Item</th>
+                    <th className="p-3 text-right text-sm font-medium">Qty</th>
+                    <th className="p-3 text-right text-sm font-medium">Rate</th>
+                    <th className="p-3 text-right text-sm font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedItems.map((item, i) => (
+                    <tr key={i} className="border-b">
+                      <td className="p-3 text-sm">{i + 1}</td>
+                      <td className="p-3 text-sm">{item.name}</td>
+                      <td className="p-3 text-sm text-right">
+                        {item.weight || item.quantity || 0}
+                      </td>
+                      <td className="p-3 text-sm text-right">
+                        {formatCurrency(item.sellingPrice)}
+                      </td>
+                      <td className="p-3 text-sm text-right">
+                        {formatCurrency(item.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals Summary */}
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Subtotal</span>
@@ -618,42 +457,318 @@ export default function SalesForm({
                 </>
               )}
             </div>
+          </div>
 
-            {selectedCustomer && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Available Credit:{" "}
-                  {formatCurrency(
-                    selectedCustomer.creditLimit - selectedCustomer.currentBalance
+          {/* Preview Action Buttons */}
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setShowPreview(false)}>
+              Back to Edit
+            </Button>
+            <Button onClick={handleConfirmSale} disabled={isLoading}>
+              Confirm Sale
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <DialogHeader>
+            <DialogTitle>Create New Sale</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-6 py-4">
+            {/* Customer Selection */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium mb-1 block">Customer*</label>
+                <div className="flex gap-2">
+                  <Select value={formData.customerId} onValueChange={handleCustomerSelect}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer._id} value={customer._id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={customerOpen} onOpenChange={setCustomerOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Customer</DialogTitle>
+                      </DialogHeader>
+                      <CustomerForm
+                        onSuccess={() => {
+                          setCustomerOpen(false);
+                          fetchCustomers();
+                        }}
+                        onCancel={() => setCustomerOpen(false)}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                {selectedCustomer && (
+                  <div className="text-sm bg-muted/50 p-2 rounded">
+                    <p>
+                      Credit Limit: {formatCurrency(selectedCustomer?.creditLimit || 0)}
+                    </p>
+                    <p>
+                      Current Balance: {formatCurrency(selectedCustomer?.currentBalance || 0)}
+                    </p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => handleViewLedger(selectedCustomer?._id)}
+                      className="p-0 h-auto"
+                    >
+                      View Ledger
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1 block">Sale Date*</label>
+                <DatePicker
+                  date={formData.date}
+                  onDateChange={(date) => {
+                    if (date) {
+                      setFormData((prev) => ({ ...prev, date }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Basic Details */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Delivery Address</label>
+                <Input
+                  value={formData.deliveryAddress}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      deliveryAddress: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter delivery address"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Vehicle No.</label>
+                <Input
+                  value={formData.vehicleNo}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, vehicleNo: e.target.value }))}
+                  placeholder="Enter vehicle number"
+                />
+              </div>
+            </div>
+
+            {/* Items Section */}
+            <div className="space-y-4 relative">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Items</h3>
+                {selectedItems.length > 0 && (
+                  <span className="text-sm text-muted-foreground">{selectedItems.length} item(s)</span>
+                )}
+              </div>
+
+              {/* Item Cards */}
+              {selectedItems.map((item, index) => (
+                <div key={index} className="border p-4 rounded-lg space-y-4 bg-white">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium text-sm text-muted-foreground">Item {index + 1}</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <ItemSelection
+                    item={item}
+                    index={index}
+                    items={items}
+                    onItemChange={handleItemChange}
+                    quantityErrors={quantityErrors}
+                  />
+                </div>
+              ))}
+
+              {selectedItems.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p className="mb-4">No items added yet</p>
+                  <Button onClick={addItem} className="bg-primary hover:bg-primary/90">
+                    <Plus className="h-4 w-4 mr-2" /> Add Your First Item
+                  </Button>
+                </div>
+              )}
+
+              {/* Floating Add Item Button - shown when items exist */}
+              {selectedItems.length > 0 && (
+                <div className="flex justify-center pt-2">
+                  <Button onClick={addItem} className="bg-primary hover:bg-primary/90 shadow-lg">
+                    <Plus className="h-4 w-4 mr-2" /> Add Another Item
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Section */}
+            {selectedItems.length > 0 && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Discount (%)</label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.discount}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          discount: sanitizeNumericInput(e.target.value),
+                        }))
+                      }
+                      onKeyDown={handleNumericKeyDown}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Amount Paid</label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.amountPaid}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          amountPaid: sanitizeNumericInput(e.target.value),
+                        }))
+                      }
+                      onKeyDown={handleNumericKeyDown}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  {Number(formData.amountPaid) > 0 && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Payment Mode</label>
+                        <Select
+                          value={formData.paymentMode}
+                          onValueChange={(value: "cash" | "cheque" | "online") =>
+                            setFormData((prev) => ({ ...prev, paymentMode: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="cheque">Cheque</SelectItem>
+                            <SelectItem value="online">Online</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {formData.paymentMode !== "cash" && (
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Reference Number</label>
+                          <Input
+                            value={formData.paymentReference}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                paymentReference: e.target.value,
+                              }))
+                            }
+                            placeholder="Enter reference number"
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
-                </AlertDescription>
-              </Alert>
+                </div>
+
+                {/* Summary */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Subtotal</span>
+                    <span>{formatCurrency(calculateTotals().subtotal)}</span>
+                  </div>
+                  {Number(formData.discount) > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span className="text-sm">Discount ({formData.discount}%)</span>
+                      <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-medium pt-2 border-t">
+                    <span>Grand Total</span>
+                    <span className="text-lg">{formatCurrency(calculateTotals().grandTotal)}</span>
+                  </div>
+                  {Number(formData.amountPaid) > 0 && (
+                    <>
+                      <div className="flex justify-between text-green-600">
+                        <span>Amount Paid</span>
+                        <span>{formatCurrency(Number(formData.amountPaid))}</span>
+                      </div>
+                      <div className="flex justify-between text-red-600 font-medium">
+                        <span>Balance</span>
+                        <span>{formatCurrency(calculateTotals().balance)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {selectedCustomer && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Available Credit:{" "}
+                      {formatCurrency(
+                        selectedCustomer.creditLimit - selectedCustomer.currentBalance
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading || Object.keys(quantityErrors).length > 0}
-        >
-          Create Sale
-        </Button>
-      </div>
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoading || Object.keys(quantityErrors).length > 0}
+            >
+              Create Sale
+            </Button>
+          </div>
 
-      {/* Ledger Modal */}
-      {showLedger && (
-        <LedgerModal
-          transactions={transactions}
-          open={showLedger}
-          onClose={() => setShowLedger(false)}
-        />
+          {/* Ledger Modal */}
+          {showLedger && (
+            <LedgerModal
+              transactions={transactions}
+              open={showLedger}
+              onClose={() => setShowLedger(false)}
+            />
+          )}
+        </>
       )}
     </DialogContent>
   );

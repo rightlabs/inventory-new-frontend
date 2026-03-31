@@ -143,6 +143,18 @@ export interface SaleItem {
   variant?: string | null;
 }
 
+export interface ReturnedItem {
+  itemIndex: number;
+  itemId: string;
+  name: string;
+  quantityReturned: number;
+  weightReturned?: number;
+  piecesReturned?: number;
+  amount: number;
+  returnDate: string;
+  reason?: string;
+}
+
 export interface Sale {
   _id: string;
   saleNumber: string;
@@ -158,9 +170,11 @@ export interface Sale {
   totalAmount: number;
   discount: number;
   grandTotal: number;
+  originalGrandTotal?: number;
   balanceAmount: number;
-  status: "pending" | "delivered";
+  status: "pending" | "delivered" | "cancelled";
   paymentStatus: "unpaid" | "partial" | "paid";
+  returnedItems?: ReturnedItem[];
 }
 
 // Purchase Types

@@ -224,9 +224,6 @@ export default function PurchasePage() {
                     Balance
                   </th>
                   <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                     Payment
                   </th>
                   <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -270,9 +267,6 @@ export default function PurchasePage() {
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatCurrency(purchase.balanceAmount)}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <StatusBadge status={purchase.status} />
                       </td>
                       <td className="p-4 align-middle">
                         <PaymentBadge status={purchase.paymentStatus} />
