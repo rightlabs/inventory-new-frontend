@@ -52,3 +52,36 @@ export const getCustomerTotalSales = async (customerId: string) => {
     throw error;
   }
 };
+
+export const getCustomerById = async (customerId: string) => {
+  try {
+    const res = await API_INSTANCE.get(`/customer/${customerId}`);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateCustomer = async (customerId: string, data: object) => {
+  try {
+    const res = await API_INSTANCE.put(`/customer/${customerId}`, data);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const addCustomerAdvance = async (
+  customerId: string,
+  data: { amount: number; mode: string; reference?: string; notes?: string }
+) => {
+  try {
+    const res = await API_INSTANCE.post(
+      `/customer/${customerId}/advance`,
+      data
+    );
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};

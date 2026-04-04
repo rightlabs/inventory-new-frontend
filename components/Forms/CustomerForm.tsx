@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { addCustomer } from "@/api/customer";
+import { addCustomer, updateCustomer } from "@/api/customer";
+import { CustomerDetail } from "@/types/type";
 
 interface CustomerFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  initialData?: CustomerDetail | null;
 }
 
 interface CustomerFormData {
@@ -22,33 +24,65 @@ interface CustomerFormData {
   city: string;
   pincode: string;
   creditLimit: number;
-  currentBalance: number;
+  openingBalance: number;
 }
 
 export default function CustomerForm({
   onSuccess,
   onCancel,
+  initialData,
 }: CustomerFormProps) {
+  const isEditMode = !!initialData;
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
-  } = useForm<CustomerFormData>();
+    formState: { errors, isSubmitting },
+  } = useForm<CustomerFormData>({
+    defaultValues: initialData
+      ? {
+          businessName: initialData.businessName,
+          gstin: initialData.gstin || "",
+          contactPerson: initialData.contactPerson || "",
+          phone: initialData.phone || "",
+          email: initialData.email || "",
+          addressLine1: initialData.addressLine1 || "",
+          addressLine2: initialData.addressLine2 || "",
+          city: initialData.city || "",
+          pincode: initialData.pincode || "",
+          creditLimit: initialData.creditLimit || 0,
+          openingBalance: initialData.openingBalance || 0,
+        }
+      : undefined,
+  });
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
-      const res = await addCustomer(data);
-
-      if (res?.data.statusCode === 200 || res?.data.statusCode === 201) {
-        toast.success("Customer created successfully");
-        reset();
-        onSuccess?.();
+      if (isEditMode) {
+        const res = await updateCustomer(initialData._id, data);
+        if (res?.data.statusCode === 200) {
+          toast.success("Customer updated successfully");
+          onSuccess?.();
+        }
+      } else {
+        // For create, map openingBalance to currentBalance for backward compat
+        const createData = {
+          ...data,
+          currentBalance: data.openingBalance || 0,
+        };
+        const res = await addCustomer(createData);
+        if (res?.data.statusCode === 200 || res?.data.statusCode === 201) {
+          toast.success("Customer created successfully");
+          reset();
+          onSuccess?.();
+        }
       }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create customer"
-      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        (error instanceof Error ? error.message : `Failed to ${isEditMode ? "update" : "create"} customer`);
+      toast.error(message);
     }
   };
 
@@ -79,16 +113,8 @@ export default function CustomerForm({
             <div>
               <label className="text-sm font-medium mb-1 block">GSTIN</label>
               <Input
-                // {...register("gstin", {
-                //   required: "GSTIN is required",
-                //   pattern: {
-                //     value:
-                //       /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                //     message: "Invalid GSTIN format",
-                //   },
-                // })}
+                {...register("gstin")}
                 placeholder="Enter GSTIN"
-                // className={errors.gstin ? "border-red-500" : ""}
               />
               {errors.gstin && (
                 <p className="text-red-500 text-xs mt-1">
@@ -104,13 +130,7 @@ export default function CustomerForm({
               <Input
                 {...register("contactPerson")}
                 placeholder="Enter contact person name"
-                className={errors.contactPerson ? "border-red-500" : ""}
               />
-              {errors.contactPerson && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.contactPerson.message}
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -168,13 +188,7 @@ export default function CustomerForm({
             <Input
               {...register("addressLine1")}
               placeholder="Building number, Street name"
-              className={errors.addressLine1 ? "border-red-500" : ""}
             />
-            {errors.addressLine1 && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.addressLine1.message}
-              </p>
-            )}
           </div>
 
           <div>
@@ -245,7 +259,7 @@ export default function CustomerForm({
                 Opening Balance
               </label>
               <Input
-                {...register("currentBalance", {
+                {...register("openingBalance", {
                   valueAsNumber: true,
                   min: {
                     value: 0,
@@ -254,11 +268,11 @@ export default function CustomerForm({
                 })}
                 type="number"
                 placeholder="Enter opening balance"
-                className={errors.currentBalance ? "border-red-500" : ""}
+                className={errors.openingBalance ? "border-red-500" : ""}
               />
-              {errors.currentBalance && (
+              {errors.openingBalance && (
                 <p className="text-red-500 text-xs mt-1">
-                  {errors.currentBalance.message}
+                  {errors.openingBalance.message}
                 </p>
               )}
             </div>
@@ -268,7 +282,7 @@ export default function CustomerForm({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Make sure to verify the GSTIN number before adding the customer.
+            Make sure to verify the GSTIN number before {isEditMode ? "updating" : "adding"} the customer.
           </AlertDescription>
         </Alert>
       </div>
@@ -280,7 +294,15 @@ export default function CustomerForm({
             Cancel
           </Button>
         )}
-        <Button type="submit">Add Customer</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? isEditMode
+              ? "Updating..."
+              : "Adding..."
+            : isEditMode
+            ? "Update Customer"
+            : "Add Customer"}
+        </Button>
       </div>
     </form>
   );

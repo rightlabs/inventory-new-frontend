@@ -300,6 +300,25 @@ export interface CustomerFormData {
   pincode: string;
   creditLimit: number;
   currentBalance?: number;
+  openingBalance?: number;
+}
+
+export interface CustomerDetail {
+  _id: string;
+  id: string;
+  businessName: string;
+  gstin: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  pincode: string;
+  creditLimit: number;
+  currentBalance: number;
+  openingBalance: number;
+  status: "active" | "inactive";
 }
 
 export interface VendorFormData {

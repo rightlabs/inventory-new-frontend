@@ -12,12 +12,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, FileText } from "lucide-react";
-import { getCustomers, getCustomerTotalSales } from "@/api/customer";
-import { Customer } from "@/types/type";
+import { Download, Plus, FileText, Pencil, Wallet } from "lucide-react";
+import {
+  getCustomers,
+  getCustomerTotalSales,
+  getCustomerById,
+  getCustomerLedger,
+} from "@/api/customer";
+import { Customer, CustomerDetail } from "@/types/type";
 import CustomerForm from "@/components/Forms/CustomerForm";
+import AdvancePaymentModal from "@/components/Forms/AdvancePaymentModal";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
-import { getCustomerLedger } from "@/api/customer";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -29,13 +34,23 @@ export default function CustomersPage() {
   );
   const [transactions, setTransactions] = useState([]);
 
+  // Edit customer state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editCustomerData, setEditCustomerData] =
+    useState<CustomerDetail | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+
+  // Advance payment state
+  const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [advanceCustomer, setAdvanceCustomer] = useState<{
+    _id: string;
+    name: string;
+  } | null>(null);
+
   const fetchCustomers = async () => {
     try {
       setIsLoading(true);
-      const [customersResponse] = await Promise.all([
-        getCustomers(),
-        ...customers.map((customer) => getCustomerTotalSales(customer._id)),
-      ]);
+      const customersResponse = await getCustomers();
 
       if (customersResponse?.data?.statusCode === 200) {
         const customersWithTotalSales = await Promise.all(
@@ -71,6 +86,26 @@ export default function CustomersPage() {
     }
   };
 
+  const handleEditCustomer = async (customerId: string) => {
+    try {
+      setIsLoadingEdit(true);
+      const response = await getCustomerById(customerId);
+      if (response?.data?.statusCode === 200) {
+        setEditCustomerData(response.data.data);
+        setEditOpen(true);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch customer details");
+    } finally {
+      setIsLoadingEdit(false);
+    }
+  };
+
+  const handleAdvancePayment = (customerId: string, customerName: string) => {
+    setAdvanceCustomer({ _id: customerId, name: customerName });
+    setAdvanceOpen(true);
+  };
+
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -86,22 +121,6 @@ export default function CustomersPage() {
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
       >
         {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const TypeBadge = ({ type }: { type: Customer["type"] }) => {
-    const styles = {
-      retail: "bg-blue-100 text-blue-800",
-      wholesale: "bg-purple-100 text-purple-800",
-      distributor: "bg-orange-100 text-orange-800",
-    };
-
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[type]}`}
-      >
-        {type?.charAt(0).toUpperCase() + type?.slice(1)}
       </span>
     );
   };
@@ -238,11 +257,33 @@ export default function CustomersPage() {
                         <StatusBadge status={customer.status} />
                       </td>
                       <td className="p-4 align-middle">
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="group"
+                            title="Edit Customer"
+                            disabled={isLoadingEdit}
+                            onClick={() => handleEditCustomer(customer._id)}
+                          >
+                            <Pencil className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group"
+                            title="Record Advance"
+                            onClick={() =>
+                              handleAdvancePayment(customer._id, customer.name)
+                            }
+                          >
+                            <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group"
+                            title="View Ledger"
                             onClick={() => handleViewLedger(customer._id)}
                           >
                             <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
@@ -257,6 +298,71 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Customer Dialog */}
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditCustomerData(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>
+              Update customer details and business information
+            </DialogDescription>
+          </DialogHeader>
+          {editCustomerData && (
+            <CustomerForm
+              initialData={editCustomerData}
+              onSuccess={() => {
+                setEditOpen(false);
+                setEditCustomerData(null);
+                fetchCustomers();
+              }}
+              onCancel={() => {
+                setEditOpen(false);
+                setEditCustomerData(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Advance Payment Dialog */}
+      <Dialog
+        open={advanceOpen}
+        onOpenChange={(open) => {
+          setAdvanceOpen(open);
+          if (!open) setAdvanceCustomer(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Record Advance Payment</DialogTitle>
+            <DialogDescription>
+              Record an advance payment received from the customer
+            </DialogDescription>
+          </DialogHeader>
+          {advanceCustomer && (
+            <AdvancePaymentModal
+              customerId={advanceCustomer._id}
+              customerName={advanceCustomer.name}
+              onSuccess={() => {
+                setAdvanceOpen(false);
+                setAdvanceCustomer(null);
+                fetchCustomers();
+              }}
+              onCancel={() => {
+                setAdvanceOpen(false);
+                setAdvanceCustomer(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {showLedger && selectedCustomerId && (
         <LedgerModal
