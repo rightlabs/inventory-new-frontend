@@ -213,7 +213,7 @@ export default function DashboardPage() {
                   {formatCurrency(summaryStats.totalReceivables)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  जो बिल अभी पूरे नहीं भरे गए
+                  सभी ग्राहकों का कुल बकाया
                 </p>
               </div>
               <ArrowUpRight className="h-8 w-8 text-green-500" />

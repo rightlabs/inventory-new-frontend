@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { getVendors } from "@/api/vendor";
 import { getPurchases } from "@/api/purchase";
 import toast from "react-hot-toast";
@@ -54,6 +55,7 @@ export default function PurchasePage() {
     totalItems: 0,
   });
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
     null
   );
@@ -143,6 +145,16 @@ export default function PurchasePage() {
     }).format(amount);
   };
 
+  const filteredPurchases = purchases.filter((purchase) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      purchase.purchaseNumber?.toLowerCase().includes(q) ||
+      purchase.invoiceNo?.toLowerCase().includes(q) ||
+      purchase.vendor?.name?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -199,6 +211,15 @@ export default function PurchasePage() {
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
           </div>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by PO number, invoice number, vendor name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -245,7 +266,7 @@ export default function PurchasePage() {
                     </td>
                   </tr>
                 ) : (
-                  purchases.map((purchase) => (
+                  filteredPurchases.map((purchase) => (
                     <tr
                       key={purchase._id}
                       className="border-b transition-colors hover:bg-muted/50"

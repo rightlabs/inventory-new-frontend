@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Plus, ScrollText } from "lucide-react";
+import { Download, Plus, ScrollText, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { getVendors } from "@/api/vendor";
 import VendorForm from "@/components/Forms/VendorForm";
 import {
@@ -37,6 +38,7 @@ export default function VendorsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [showLedger, setShowLedger] = useState(false);
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
@@ -126,6 +128,17 @@ export default function VendorsPage() {
     }).format(amount);
   };
 
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      vendor.name?.toLowerCase().includes(q) ||
+      vendor.id?.toLowerCase().includes(q) ||
+      vendor.contactPerson?.toLowerCase().includes(q) ||
+      vendor.phone?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -175,6 +188,15 @@ export default function VendorsPage() {
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
           </div>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, ID, contact person, or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -220,7 +242,7 @@ export default function VendorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {vendors.map((vendor) => (
+                  {filteredVendors.map((vendor) => (
                     <tr
                       key={vendor.id}
                       className="border-b transition-colors hover:bg-muted/50"

@@ -12,10 +12,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, FileText, Pencil, Wallet } from "lucide-react";
+import { Download, Plus, FileText, Pencil, Wallet, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   getCustomers,
-  getCustomerTotalSales,
   getCustomerById,
   getCustomerLedger,
 } from "@/api/customer";
@@ -40,6 +40,9 @@ export default function CustomersPage() {
     useState<CustomerDetail | null>(null);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Record payment state
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [advanceCustomer, setAdvanceCustomer] = useState<{
@@ -54,18 +57,7 @@ export default function CustomersPage() {
       const customersResponse = await getCustomers();
 
       if (customersResponse?.data?.statusCode === 200) {
-        const customersWithTotalSales = await Promise.all(
-          customersResponse.data.data.map(async (customer: Customer) => {
-            const totalSalesResponse = await getCustomerTotalSales(
-              customer._id
-            );
-            return {
-              ...customer,
-              totalSales: totalSalesResponse?.data?.data?.totalSales || 0,
-            };
-          })
-        );
-        setCustomers(customersWithTotalSales);
+        setCustomers(customersResponse.data.data);
       }
     } catch (error) {
       toast.error("Failed to fetch customers");
@@ -133,6 +125,17 @@ export default function CustomersPage() {
     }).format(amount);
   };
 
+  const filteredCustomers = customers.filter((customer) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      customer.name?.toLowerCase().includes(q) ||
+      customer.id?.toLowerCase().includes(q) ||
+      customer.contactPerson?.toLowerCase().includes(q) ||
+      customer.phone?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -183,6 +186,15 @@ export default function CustomersPage() {
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
           </div>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, ID, contact person, or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 max-w-sm"
+            />
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -220,7 +232,7 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map((customer) => (
+                  {filteredCustomers.map((customer) => (
                     <tr
                       key={customer.id}
                       className="border-b transition-colors hover:bg-muted/50"

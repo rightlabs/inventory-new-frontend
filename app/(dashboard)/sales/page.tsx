@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, Undo2, Wallet } from "lucide-react";
+import { Download, Plus, Undo2, Wallet, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import { getCustomers } from "@/api/customer";
 import { Customer, Sale } from "@/types/type";
@@ -29,6 +30,12 @@ export default function SalesPage() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+  });
   const [selectedSaleForReturn, setSelectedSaleForReturn] = useState<Sale | null>(null);
 
   const fetchCustomers = async () => {
@@ -42,12 +49,13 @@ export default function SalesPage() {
     }
   };
 
-  const fetchSales = async () => {
+  const fetchSales = async (page = 1) => {
     try {
       setIsLoading(true);
-      const response = await getSales();
+      const response = await getSales({ page, limit: 10 });
       if (response?.data?.statusCode === 200) {
         setSales(response.data.data.sales);
+        setPagination(response.data.data.pagination);
       }
     } catch (error) {
       toast.error("Failed to fetch sales");
@@ -169,6 +177,16 @@ export default function SalesPage() {
     setShowPaymentModal(true);
   };
 
+  const filteredSales = sales.filter((sale) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      sale.saleNumber?.toLowerCase().includes(q) ||
+      sale.customer?.name?.toLowerCase().includes(q) ||
+      sale.customer?.gstin?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -213,6 +231,15 @@ export default function SalesPage() {
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
           </div>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by sale number, customer name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -249,7 +276,7 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map((sale) => (
+                  {filteredSales.map((sale) => (
                     <tr
                       key={sale._id}
                       className="border-b transition-colors hover:bg-muted/50"
@@ -331,6 +358,33 @@ export default function SalesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing page {pagination.currentPage} of {pagination.totalPages}
+              </p>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.currentPage === 1}
+                  onClick={() => fetchSales(pagination.currentPage - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  onClick={() => fetchSales(pagination.currentPage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
