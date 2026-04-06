@@ -663,33 +663,19 @@ export default function SalesForm({
 
                   <div>
                     <label className="text-sm font-medium mb-1 block">Additional Charges</label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={formData.additionalChargesLabel}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            additionalChargesLabel: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g. Logistics, Shipping"
-                        className="flex-1"
-                      />
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={formData.additionalCharges}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            additionalCharges: sanitizeNumericInput(e.target.value),
-                          }))
-                        }
-                        onKeyDown={handleNumericKeyDown}
-                        placeholder="0"
-                        className="w-28"
-                      />
-                    </div>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={formData.additionalCharges}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          additionalCharges: sanitizeNumericInput(e.target.value),
+                        }))
+                      }
+                      onKeyDown={handleNumericKeyDown}
+                      placeholder="0"
+                    />
                   </div>
 
                   <div>
