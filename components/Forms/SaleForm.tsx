@@ -47,6 +47,8 @@ interface FormData {
   deliveryAddress: string;
   vehicleNo: string;
   discount: number | string;
+  additionalCharges: number | string;
+  additionalChargesLabel: string;
   amountPaid: number | string;
   paymentMode: "cash" | "cheque" | "online";
   paymentReference: string;
@@ -115,6 +117,8 @@ export default function SalesForm({
     deliveryAddress: "",
     vehicleNo: "",
     discount: "",
+    additionalCharges: "",
+    additionalChargesLabel: "",
     amountPaid: "",
     paymentMode: "cash",
     paymentReference: "",
@@ -221,13 +225,15 @@ export default function SalesForm({
     const subtotal = selectedItems.reduce((sum, item) => sum + (item.amount || 0), 0);
     const discountValue = Number(formData.discount) || 0;
     const discountAmount = (subtotal * discountValue) / 100;
-    const grandTotal = subtotal - discountAmount;
+    const additionalCharges = Number(formData.additionalCharges) || 0;
+    const grandTotal = subtotal - discountAmount + additionalCharges;
     const amountPaidValue = Number(formData.amountPaid) || 0;
     const balance = grandTotal - amountPaidValue;
 
     return {
       subtotal,
       discountAmount,
+      additionalCharges,
       grandTotal,
       balance,
     };
@@ -309,6 +315,8 @@ export default function SalesForm({
         discount: Number(formData.discount) || 0,
         totalAmount: calculations.subtotal,
         discountAmount: calculations.discountAmount,
+        additionalCharges: calculations.additionalCharges,
+        additionalChargesLabel: formData.additionalChargesLabel || "",
         grandTotal: calculations.grandTotal,
         payments:
           amountPaidValue > 0
@@ -343,6 +351,8 @@ export default function SalesForm({
       deliveryAddress: "",
       vehicleNo: "",
       discount: "",
+      additionalCharges: "",
+      additionalChargesLabel: "",
       amountPaid: "",
       paymentMode: "cash",
       paymentReference: "",
@@ -438,6 +448,12 @@ export default function SalesForm({
                 <div className="flex justify-between text-red-600">
                   <span className="text-sm">Discount ({formData.discount}%)</span>
                   <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
+                </div>
+              )}
+              {Number(formData.additionalCharges) > 0 && (
+                <div className="flex justify-between text-blue-600">
+                  <span className="text-sm">{formData.additionalChargesLabel || "Additional Charges"}</span>
+                  <span>+{formatCurrency(calculateTotals().additionalCharges)}</span>
                 </div>
               )}
               <div className="flex justify-between font-medium pt-2 border-t">
@@ -646,6 +662,37 @@ export default function SalesForm({
                   </div>
 
                   <div>
+                    <label className="text-sm font-medium mb-1 block">Additional Charges</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={formData.additionalChargesLabel}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            additionalChargesLabel: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g. Logistics, Shipping"
+                        className="flex-1"
+                      />
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.additionalCharges}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            additionalCharges: sanitizeNumericInput(e.target.value),
+                          }))
+                        }
+                        onKeyDown={handleNumericKeyDown}
+                        placeholder="0"
+                        className="w-28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="text-sm font-medium mb-1 block">Amount Paid</label>
                     <Input
                       type="text"
@@ -712,6 +759,12 @@ export default function SalesForm({
                     <div className="flex justify-between text-red-600">
                       <span className="text-sm">Discount ({formData.discount}%)</span>
                       <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
+                    </div>
+                  )}
+                  {Number(formData.additionalCharges) > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span className="text-sm">{formData.additionalChargesLabel || "Additional Charges"}</span>
+                      <span>+{formatCurrency(calculateTotals().additionalCharges)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-medium pt-2 border-t">

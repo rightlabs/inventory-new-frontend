@@ -24,7 +24,14 @@ import {
   ArrowDownRight,
   Package,
   IndianRupee,
+  HelpCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface DashboardData {
   metrics: DashboardMetrics;
@@ -94,6 +101,7 @@ export default function DashboardPage() {
   );
 
   return (
+    <TooltipProvider>
     <div className="flex-1 space-y-6">
       <DashboardTopSection />
 
@@ -107,7 +115,13 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sales Orders</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Sales Orders
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>अब तक कुल कितने बिल बने हैं</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold">{summaryStats.totalSalesCount}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -122,7 +136,13 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Purchase Orders</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Purchase Orders
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>अब तक कुल कितनी खरीदारी हुई है</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold">{summaryStats.totalPurchaseCount}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -137,7 +157,13 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Customers</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Active Customers
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>कितने ग्राहक अभी चालू हैं</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold">{summaryStats.totalCustomers}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -152,7 +178,13 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Vendors</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Active Vendors
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>कितने सप्लायर अभी चालू हैं</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold">{summaryStats.totalVendors}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
@@ -170,12 +202,18 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Receivables</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Customers Se Lena Hai
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>ग्राहकों से कुल कितना पैसा आना बाकी है</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(summaryStats.totalReceivables)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Money owed by customers
+                  जो बिल अभी पूरे नहीं भरे गए
                 </p>
               </div>
               <ArrowUpRight className="h-8 w-8 text-green-500" />
@@ -188,12 +226,18 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Payables</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Vendors Ko Dena Hai
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>सप्लायर को कुल कितना पैसा देना बाकी है</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(summaryStats.totalPayables)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Money owed to vendors
+                  जो खरीदारी का पैसा अभी बाकी है
                 </p>
               </div>
               <ArrowDownRight className="h-8 w-8 text-red-500" />
@@ -206,12 +250,18 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Avg. Order Value</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Avg. Bill Value
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>एक बिल की औसत कितनी रकम होती है</p></TooltipContent>
+                  </Tooltip>
+                </p>
                 <p className="text-2xl font-bold text-blue-600">
                   {formatCurrency(summaryStats.averageOrderValue)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Per sales order
+                  हर बिल का औसत
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-500" />
@@ -281,5 +331,6 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
