@@ -80,7 +80,7 @@ export interface Transaction {
   date: string;
   documentNumber: string;
   type: "debit" | "credit";
-  mode: "cash" | "cheque" | "online" | "purchase" | "sale";
+  mode: "cash" | "cheque" | "online" | "purchase" | "sale" | "advance" | "return";
   amount: number;
   reference?: string;
   notes?: string;

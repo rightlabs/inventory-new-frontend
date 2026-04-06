@@ -10,11 +10,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import toast from "react-hot-toast";
-import { addCustomerAdvance } from "@/api/customer";
+import { recordCustomerPayment } from "@/api/customer";
 
 interface AdvancePaymentModalProps {
   customerId: string;
   customerName: string;
+  currentBalance?: number;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -22,6 +23,7 @@ interface AdvancePaymentModalProps {
 export default function AdvancePaymentModal({
   customerId,
   customerName,
+  currentBalance,
   onSuccess,
   onCancel,
 }: AdvancePaymentModalProps) {
@@ -30,6 +32,13 @@ export default function AdvancePaymentModal({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +56,7 @@ export default function AdvancePaymentModal({
 
     setIsSubmitting(true);
     try {
-      const res = await addCustomerAdvance(customerId, {
+      const res = await recordCustomerPayment(customerId, {
         amount: numAmount,
         mode,
         reference: reference || undefined,
@@ -55,13 +64,12 @@ export default function AdvancePaymentModal({
       });
 
       if (res?.data?.statusCode === 201 || res?.data?.statusCode === 200) {
-        toast.success("Advance payment recorded successfully");
+        toast.success("Payment recorded successfully");
         onSuccess();
       }
     } catch (error: any) {
       const message =
-        error?.response?.data?.message ||
-        "Failed to record advance payment";
+        error?.response?.data?.message || "Failed to record payment";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -72,9 +80,16 @@ export default function AdvancePaymentModal({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 py-4">
         <p className="text-sm text-muted-foreground">
-          Record an advance payment received from{" "}
+          Record a payment received from{" "}
           <span className="font-medium text-foreground">{customerName}</span>.
-          This will be credited to their account.
+          {currentBalance !== undefined && (
+            <>
+              {" "}Current balance:{" "}
+              <span className={`font-medium ${currentBalance > 0 ? "text-red-600" : "text-green-600"}`}>
+                {formatCurrency(currentBalance)}
+              </span>
+            </>
+          )}
         </p>
 
         <div>
@@ -83,7 +98,7 @@ export default function AdvancePaymentModal({
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="Enter advance amount"
+            placeholder="Enter payment amount"
             min="1"
             step="0.01"
             required
@@ -130,7 +145,7 @@ export default function AdvancePaymentModal({
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Recording..." : "Record Advance"}
+          {isSubmitting ? "Recording..." : "Record Payment"}
         </Button>
       </div>
     </form>

@@ -40,11 +40,12 @@ export default function CustomersPage() {
     useState<CustomerDetail | null>(null);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
-  // Advance payment state
+  // Record payment state
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [advanceCustomer, setAdvanceCustomer] = useState<{
     _id: string;
     name: string;
+    currentBalance: number;
   } | null>(null);
 
   const fetchCustomers = async () => {
@@ -101,8 +102,8 @@ export default function CustomersPage() {
     }
   };
 
-  const handleAdvancePayment = (customerId: string, customerName: string) => {
-    setAdvanceCustomer({ _id: customerId, name: customerName });
+  const handleRecordPayment = (customerId: string, customerName: string, currentBalance: number) => {
+    setAdvanceCustomer({ _id: customerId, name: customerName, currentBalance });
     setAdvanceOpen(true);
   };
 
@@ -272,9 +273,9 @@ export default function CustomersPage() {
                             variant="ghost"
                             size="icon"
                             className="group"
-                            title="Record Advance"
+                            title="Record Payment"
                             onClick={() =>
-                              handleAdvancePayment(customer._id, customer.name)
+                              handleRecordPayment(customer._id, customer.name, customer.currentBalance)
                             }
                           >
                             <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
@@ -331,7 +332,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Advance Payment Dialog */}
+      {/* Record Payment Dialog */}
       <Dialog
         open={advanceOpen}
         onOpenChange={(open) => {
@@ -341,15 +342,16 @@ export default function CustomersPage() {
       >
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Record Advance Payment</DialogTitle>
+            <DialogTitle>Record Payment</DialogTitle>
             <DialogDescription>
-              Record an advance payment received from the customer
+              Record a payment received from the customer
             </DialogDescription>
           </DialogHeader>
           {advanceCustomer && (
             <AdvancePaymentModal
               customerId={advanceCustomer._id}
               customerName={advanceCustomer.name}
+              currentBalance={advanceCustomer.currentBalance}
               onSuccess={() => {
                 setAdvanceOpen(false);
                 setAdvanceCustomer(null);

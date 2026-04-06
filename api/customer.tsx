@@ -85,3 +85,18 @@ export const addCustomerAdvance = async (
     throw error;
   }
 };
+
+export const recordCustomerPayment = async (
+  customerId: string,
+  data: { amount: number; mode: string; reference?: string; notes?: string }
+) => {
+  try {
+    const res = await API_INSTANCE.post(
+      `/customer/${customerId}/payment`,
+      data
+    );
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
