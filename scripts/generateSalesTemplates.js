@@ -102,12 +102,20 @@ async function generateFittingTemplate() {
   sheet.cell(3, 7).value(100);
   sheet.cell(3, 8).value(20); // Absolute margin value
 
+  // Put subcategories on a hidden sheet — Windows Excel has a 255-char limit
+  // for inline data validation strings, so we use a range reference instead.
+  const listsSheet = workbook.addSheet('Lists');
+  fittingSubCategories.forEach((cat, i) => {
+    listsSheet.cell(i + 1, 1).value(cat);
+  });
+  listsSheet.hidden(true);
+
   // Add dropdown validations
-  // Column A = Sub Category
+  // Column A = Sub Category (references hidden Lists sheet — works on Windows & Mac)
   sheet.range('A2:A1000').dataValidation({
     type: 'list',
     allowBlank: true,
-    formula1: `"${fittingSubCategories.join(',')}"`
+    formula1: `Lists!$A$1:$A$${fittingSubCategories.length}`
   });
 
   // Column B = Type (Round, Square)
