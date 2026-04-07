@@ -430,4 +430,11 @@ const FITTING_SUBCATEGORIES = [
   "bail",
   "gate_wheel",
   "gate_opener",
+  "kancha",
+  "besh",
+  "pendi",
+  "band",
+  "shubh",
+  "ganesh",
+  "lock_kunda",
 ];

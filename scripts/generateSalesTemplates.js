@@ -9,8 +9,19 @@ const fittingSubCategories = [
   'l_drop', 'stopper', 'd_lock', 'hinges', 'balustred_cap', 'baluster',
   'master_pillar', 'starwindow', 'butterfly', 'gamla', 'step', 'baind',
   'star_ring', 'ring', 'bhala', 'braket', 'ground_braket', 'om',
-  'swastik', 'shubh_labh', 'mel_femel_nut', 'flower', 'bail',
-  'gate_wheel', 'gate_opener', 'kancha', 'besh', 'pendi'
+  'swastik', 'shubh_labh', 'shubh', 'mel_femel_nut', 'flower', 'bail',
+  'gate_wheel', 'gate_opener', 'kancha', 'besh', 'pendi',
+  'band', 'ganesh', 'lock_kunda',
+];
+
+// Fitting type options (covers all subcategory-specific types)
+const fittingTypes = [
+  'Round', 'Square',
+  'Half', 'Full',
+  'One Side', 'Two Side',
+  'Half Plate', 'Full Plate',
+  'Dibbi', 'Non Dibbi',
+  'Two Pin', 'Three Pin',
 ];
 
 // Generate Sales Pipe/Sheet Template
@@ -102,27 +113,30 @@ async function generateFittingTemplate() {
   sheet.cell(3, 7).value(100);
   sheet.cell(3, 8).value(20); // Absolute margin value
 
-  // Put subcategories on a hidden sheet — Windows Excel has a 255-char limit
-  // for inline data validation strings, so we use a range reference instead.
+  // Put subcategories (col A) and types (col B) on a hidden sheet.
+  // Windows Excel has a 255-char limit for inline validation strings.
   const listsSheet = workbook.addSheet('Lists');
   fittingSubCategories.forEach((cat, i) => {
     listsSheet.cell(i + 1, 1).value(cat);
   });
+  fittingTypes.forEach((t, i) => {
+    listsSheet.cell(i + 1, 2).value(t);
+  });
   listsSheet.hidden(true);
 
   // Add dropdown validations
-  // Column A = Sub Category (references hidden Lists sheet — works on Windows & Mac)
+  // Column A = Sub Category
   sheet.range('A2:A1000').dataValidation({
     type: 'list',
     allowBlank: true,
     formula1: `Lists!$A$1:$A$${fittingSubCategories.length}`
   });
 
-  // Column B = Type (Round, Square)
+  // Column B = Type
   sheet.range('B2:B1000').dataValidation({
     type: 'list',
     allowBlank: true,
-    formula1: '"Round,Square"'
+    formula1: `Lists!$B$1:$B$${fittingTypes.length}`
   });
 
   // Column D = Grade (304, 202)

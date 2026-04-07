@@ -74,6 +74,10 @@ const FITTING_SUBCATEGORIES = [
   "kancha",
   "besh",
   "pendi",
+  "band",
+  "shubh",
+  "ganesh",
+  "lock_kunda",
 ];
 
 const POLISH_SUBCATEGORIES = [
