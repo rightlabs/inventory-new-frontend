@@ -274,14 +274,6 @@ const PurchaseModal = ({
     return size?.replace(/'/g, "'").replace(/"/g, '"') || "";
   };
 
-  const shouldUseWeight = (type: string, subCategory?: string) => {
-    return (
-      type === "pipe" ||
-      type === "sheet" ||
-      (type === "fitting" && subCategory === "Bush")
-    );
-  };
-
   const processExcelData = async (file: File) => {
     const reader = new FileReader();
 
@@ -316,10 +308,8 @@ const PurchaseModal = ({
           const rate = Number(row["Rate"]) || 0;
           const specification = row["Specification"] || "";
 
-          // Calculate amount based on weight for specific items
-          const amount = shouldUseWeight(itemType, row["Sub Category"])
-            ? (weight || 0) * rate
-            : (pieces || 0) * rate;
+          // Calculate amount: use whichever unit has data
+          const amount = weight ? weight * rate : (pieces || 0) * rate;
 
           // For fitting items, store Type in a separate field
           const typeValue = itemType === "fitting" ? row["Type"] : undefined;
