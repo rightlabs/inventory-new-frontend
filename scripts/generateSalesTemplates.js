@@ -12,6 +12,7 @@ const fittingSubCategories = [
   'swastik', 'shubh_labh', 'shubh', 'mel_femel_nut', 'flower', 'bail',
   'gate_wheel', 'gate_opener', 'kancha', 'besh', 'pendi',
   'band', 'ganesh', 'lock_kunda',
+  'chand', 'trishul', 'umbrella_wall', 'kalash', 'janzeer', 'jhula_set',
 ];
 
 // Fitting type options (covers all subcategory-specific types)
@@ -22,6 +23,8 @@ const fittingTypes = [
   'Half Plate', 'Full Plate',
   'Dibbi', 'Non Dibbi',
   'Two Pin', 'Three Pin',
+  'Ring', 'Varasi', 'Rassi', 'Double Wall', 'Matka',
+  'Rectangle',
 ];
 
 // Generate Sales Pipe/Sheet Template

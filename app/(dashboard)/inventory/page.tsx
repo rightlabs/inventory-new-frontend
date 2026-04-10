@@ -78,6 +78,12 @@ const FITTING_SUBCATEGORIES = [
   "shubh",
   "ganesh",
   "lock_kunda",
+  "chand",
+  "trishul",
+  "umbrella_wall",
+  "kalash",
+  "janzeer",
+  "jhula_set",
 ];
 
 const POLISH_SUBCATEGORIES = [
