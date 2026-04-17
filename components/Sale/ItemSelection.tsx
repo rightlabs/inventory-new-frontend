@@ -516,14 +516,40 @@ export default function ItemSelection({
               />
             </div>
 
-            {/* Selling Price (calculated) */}
+            {/* Selling Price (editable — two-way bound with margin) */}
             <div>
               <label className="text-sm font-medium mb-1 block">Selling Price</label>
               <Input
-                type="number"
-                value={(item.sellingPrice || 0).toFixed(2)}
-                disabled
-                className="bg-muted"
+                type="text"
+                inputMode="decimal"
+                value={item.sellingPrice ?? ""}
+                onChange={(e) => {
+                  const value = sanitizeNumericInput(e.target.value);
+                  const rate = parseFloat(String(item.rate)) || 0;
+                  const qty = selectedProduct.unitType === "weight" ? (parseFloat(String(item.weight)) || 0) : (parseFloat(String(item.quantity)) || 0);
+
+                  if (value === "") {
+                    onItemChange(index, {
+                      ...item,
+                      sellingPrice: "",
+                      margin: "",
+                      amount: 0,
+                    });
+                    return;
+                  }
+                  const sellingPrice = parseFloat(value);
+                  if (isNaN(sellingPrice)) return;
+
+                  const margin = Number((sellingPrice - rate).toFixed(2));
+                  const amount = qty * sellingPrice;
+
+                  const preserveAsString = value.endsWith('.') || (value.includes('.') && value.endsWith('0'));
+                  const priceToStore = preserveAsString ? value : sellingPrice;
+
+                  onItemChange(index, { ...item, sellingPrice: priceToStore, margin, amount });
+                }}
+                onKeyDown={handleNumericKeyDown}
+                placeholder="Enter selling price"
               />
             </div>
           </div>

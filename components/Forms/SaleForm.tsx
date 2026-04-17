@@ -309,7 +309,7 @@ export default function SalesForm({
           pieces: item.pieces || item.quantity,
           rate: Number(item.rate) || 0,
           margin: Number(item.margin) || 0,
-          sellingPrice: item.sellingPrice,
+          sellingPrice: Number(item.sellingPrice) || 0,
           amount: item.amount,
         })),
         discount: Number(formData.discount) || 0,
