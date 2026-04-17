@@ -41,17 +41,23 @@ interface SalesFormProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type PaymentMode = "cash" | "cheque" | "online";
+
+interface PaymentRow {
+  amount: number | string;
+  mode: PaymentMode;
+  reference: string;
+}
+
 interface FormData {
   customerId: string;
   date: Date;
   deliveryAddress: string;
   vehicleNo: string;
   discount: number | string;
+  discountType: "percent" | "amount";
   additionalCharges: number | string;
   additionalChargesLabel: string;
-  amountPaid: number | string;
-  paymentMode: "cash" | "cheque" | "online";
-  paymentReference: string;
 }
 
 // Helper function to sanitize numeric input - only allows digits and decimal point
@@ -111,18 +117,31 @@ export default function SalesForm({
     [key: number]: QuantityError;
   }>({});
   const [showPreview, setShowPreview] = useState(false);
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([]);
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
     date: new Date(),
     deliveryAddress: "",
     vehicleNo: "",
     discount: "",
+    discountType: "percent",
     additionalCharges: "",
     additionalChargesLabel: "",
-    amountPaid: "",
-    paymentMode: "cash",
-    paymentReference: "",
   });
+
+  const addPaymentRow = () => {
+    setPaymentRows((prev) => [...prev, { amount: "", mode: "cash", reference: "" }]);
+  };
+
+  const updatePaymentRow = (idx: number, patch: Partial<PaymentRow>) => {
+    setPaymentRows((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, ...patch } : row))
+    );
+  };
+
+  const removePaymentRow = (idx: number) => {
+    setPaymentRows((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleViewLedger = async (customerId: string) => {
     try {
@@ -224,17 +243,28 @@ export default function SalesForm({
   const calculateTotals = () => {
     const subtotal = selectedItems.reduce((sum, item) => sum + (item.amount || 0), 0);
     const discountValue = Number(formData.discount) || 0;
-    const discountAmount = (subtotal * discountValue) / 100;
+    const rawDiscountAmount =
+      formData.discountType === "amount"
+        ? discountValue
+        : (subtotal * discountValue) / 100;
+    // Cap discount at subtotal so grandTotal can't go negative.
+    const discountAmount = Math.min(Math.max(0, rawDiscountAmount), subtotal);
     const additionalCharges = Number(formData.additionalCharges) || 0;
-    const grandTotal = subtotal - discountAmount + additionalCharges;
-    const amountPaidValue = Number(formData.amountPaid) || 0;
-    const balance = grandTotal - amountPaidValue;
+    const grandTotal = Number(
+      (subtotal - discountAmount + additionalCharges).toFixed(2)
+    );
+    const amountPaidValue = paymentRows.reduce(
+      (sum, p) => sum + (Number(p.amount) || 0),
+      0
+    );
+    const balance = Number((grandTotal - amountPaidValue).toFixed(2));
 
     return {
       subtotal,
       discountAmount,
       additionalCharges,
       grandTotal,
+      amountPaid: amountPaidValue,
       balance,
     };
   };
@@ -277,6 +307,23 @@ export default function SalesForm({
 
     const calculations = calculateTotals();
 
+    // Validate split payments: total paid must not exceed grand total.
+    if (calculations.amountPaid > calculations.grandTotal + 0.001) {
+      toast.error(
+        `Total payments (₹${calculations.amountPaid.toFixed(2)}) exceed grand total (₹${calculations.grandTotal.toFixed(2)})`
+      );
+      return;
+    }
+
+    // Validate each payment row has amount + mode
+    const invalidRow = paymentRows.find(
+      (p) => Number(p.amount) > 0 && !p.mode
+    );
+    if (invalidRow) {
+      toast.error("Every payment row with an amount needs a payment mode");
+      return;
+    }
+
     if (selectedCustomer) {
       const potentialNewBalance = selectedCustomer.currentBalance + calculations.balance;
       if (selectedCustomer.creditLimit === 0) {
@@ -292,7 +339,15 @@ export default function SalesForm({
   const handleConfirmSale = async () => {
     try {
       const calculations = calculateTotals();
-      const amountPaidValue = Number(formData.amountPaid) || 0;
+
+      const validPayments = paymentRows
+        .map((p) => ({
+          amount: Number(p.amount) || 0,
+          mode: p.mode,
+          reference: p.reference || "",
+          date: new Date(),
+        }))
+        .filter((p) => p.amount > 0);
 
       const saleData = {
         customerId: formData.customerId,
@@ -313,22 +368,13 @@ export default function SalesForm({
           amount: item.amount,
         })),
         discount: Number(formData.discount) || 0,
+        discountType: formData.discountType,
         totalAmount: calculations.subtotal,
         discountAmount: calculations.discountAmount,
         additionalCharges: calculations.additionalCharges,
         additionalChargesLabel: formData.additionalChargesLabel || "",
         grandTotal: calculations.grandTotal,
-        payments:
-          amountPaidValue > 0
-            ? [
-                {
-                  amount: amountPaidValue,
-                  mode: formData.paymentMode,
-                  reference: formData.paymentReference,
-                  date: new Date(),
-                },
-              ]
-            : [],
+        payments: validPayments,
       };
 
       const response = await createSale(saleData);
@@ -351,12 +397,11 @@ export default function SalesForm({
       deliveryAddress: "",
       vehicleNo: "",
       discount: "",
+      discountType: "percent",
       additionalCharges: "",
       additionalChargesLabel: "",
-      amountPaid: "",
-      paymentMode: "cash",
-      paymentReference: "",
     });
+    setPaymentRows([]);
     setSelectedItems([]);
     setSelectedCustomer(null);
     setQuantityErrors({});
@@ -444,9 +489,14 @@ export default function SalesForm({
                 <span className="text-sm">Subtotal</span>
                 <span>{formatCurrency(calculateTotals().subtotal)}</span>
               </div>
-              {Number(formData.discount) > 0 && (
+              {calculateTotals().discountAmount > 0 && (
                 <div className="flex justify-between text-red-600">
-                  <span className="text-sm">Discount ({formData.discount}%)</span>
+                  <span className="text-sm">
+                    Discount
+                    {formData.discountType === "percent" && Number(formData.discount) > 0
+                      ? ` (${formData.discount}%)`
+                      : ""}
+                  </span>
                   <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
                 </div>
               )}
@@ -460,17 +510,28 @@ export default function SalesForm({
                 <span>Grand Total</span>
                 <span className="text-lg">{formatCurrency(calculateTotals().grandTotal)}</span>
               </div>
-              {Number(formData.amountPaid) > 0 && (
-                <>
-                  <div className="flex justify-between text-green-600">
-                    <span>Amount Paid</span>
-                    <span>{formatCurrency(Number(formData.amountPaid))}</span>
+              {paymentRows.filter((p) => Number(p.amount) > 0).length > 0 && (
+                <div className="pt-2 border-t space-y-1">
+                  {paymentRows
+                    .filter((p) => Number(p.amount) > 0)
+                    .map((p, i) => (
+                      <div key={i} className="flex justify-between text-green-600 text-sm">
+                        <span className="capitalize">
+                          {p.mode}
+                          {p.reference ? ` (${p.reference})` : ""}
+                        </span>
+                        <span>{formatCurrency(Number(p.amount))}</span>
+                      </div>
+                    ))}
+                  <div className="flex justify-between text-green-700 font-medium">
+                    <span>Total Paid</span>
+                    <span>{formatCurrency(calculateTotals().amountPaid)}</span>
                   </div>
                   <div className="flex justify-between text-red-600 font-medium">
                     <span>Balance</span>
                     <span>{formatCurrency(calculateTotals().balance)}</span>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -645,20 +706,53 @@ export default function SalesForm({
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Discount (%)</label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={formData.discount}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          discount: sanitizeNumericInput(e.target.value),
-                        }))
-                      }
-                      onKeyDown={handleNumericKeyDown}
-                      placeholder="0"
-                    />
+                    <label className="text-sm font-medium mb-1 block">
+                      Discount {formData.discountType === "percent" ? "(%)" : "(₹)"}
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="inline-flex rounded-md border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, discountType: "percent" }))
+                          }
+                          className={`px-3 text-sm font-medium ${
+                            formData.discountType === "percent"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, discountType: "amount" }))
+                          }
+                          className={`px-3 text-sm font-medium ${
+                            formData.discountType === "amount"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          ₹
+                        </button>
+                      </div>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.discount}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            discount: sanitizeNumericInput(e.target.value),
+                          }))
+                        }
+                        onKeyDown={handleNumericKeyDown}
+                        placeholder="0"
+                        className="flex-1"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -692,58 +786,79 @@ export default function SalesForm({
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Amount Paid</label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={formData.amountPaid}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          amountPaid: sanitizeNumericInput(e.target.value),
-                        }))
-                      }
-                      onKeyDown={handleNumericKeyDown}
-                      placeholder="0"
-                    />
+                {/* Payments section — supports split payments */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium">Payments</label>
+                    <span className="text-xs text-muted-foreground">
+                      {paymentRows.length === 0
+                        ? "No payment yet — leave empty for unpaid"
+                        : `${paymentRows.length} payment(s)`}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Payment Mode</label>
-                    <Select
-                      value={formData.paymentMode}
-                      onValueChange={(value: "cash" | "cheque" | "online") =>
-                        setFormData((prev) => ({ ...prev, paymentMode: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="cheque">Cheque</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {Number(formData.amountPaid) > 0 && formData.paymentMode !== "cash" && (
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Reference Number</label>
+                  {paymentRows.map((row, idx) => (
+                    <div key={idx} className="flex gap-2 items-start">
                       <Input
-                        value={formData.paymentReference}
+                        type="text"
+                        inputMode="decimal"
+                        value={row.amount}
                         onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            paymentReference: e.target.value,
-                          }))
+                          updatePaymentRow(idx, {
+                            amount: sanitizeNumericInput(e.target.value),
+                          })
                         }
-                        placeholder="Enter reference number"
+                        onKeyDown={handleNumericKeyDown}
+                        placeholder="Amount"
+                        className="flex-1"
                       />
+                      <Select
+                        value={row.mode}
+                        onValueChange={(value: PaymentMode) =>
+                          updatePaymentRow(idx, { mode: value })
+                        }
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="online">Online</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {row.mode !== "cash" && (
+                        <Input
+                          value={row.reference}
+                          onChange={(e) =>
+                            updatePaymentRow(idx, { reference: e.target.value })
+                          }
+                          placeholder="Reference"
+                          className="flex-1"
+                        />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePaymentRow(idx)}
+                        className="h-10 w-10 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addPaymentRow}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {paymentRows.length === 0 ? "Add Payment" : "Add Another Payment"}
+                  </Button>
                 </div>
 
                 {/* Summary */}
@@ -752,9 +867,14 @@ export default function SalesForm({
                     <span className="text-sm">Subtotal</span>
                     <span>{formatCurrency(calculateTotals().subtotal)}</span>
                   </div>
-                  {Number(formData.discount) > 0 && (
+                  {calculateTotals().discountAmount > 0 && (
                     <div className="flex justify-between text-red-600">
-                      <span className="text-sm">Discount ({formData.discount}%)</span>
+                      <span className="text-sm">
+                        Discount
+                        {formData.discountType === "percent" && Number(formData.discount) > 0
+                          ? ` (${formData.discount}%)`
+                          : ""}
+                      </span>
                       <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
                     </div>
                   )}
@@ -768,16 +888,25 @@ export default function SalesForm({
                     <span>Grand Total</span>
                     <span className="text-lg">{formatCurrency(calculateTotals().grandTotal)}</span>
                   </div>
-                  {Number(formData.amountPaid) > 0 && (
+                  {calculateTotals().amountPaid > 0 && (
                     <>
                       <div className="flex justify-between text-green-600">
-                        <span>Amount Paid</span>
-                        <span>{formatCurrency(Number(formData.amountPaid))}</span>
+                        <span>Total Paid</span>
+                        <span>{formatCurrency(calculateTotals().amountPaid)}</span>
                       </div>
-                      <div className="flex justify-between text-red-600 font-medium">
+                      <div
+                        className={`flex justify-between font-medium ${
+                          calculateTotals().balance < 0 ? "text-orange-600" : "text-red-600"
+                        }`}
+                      >
                         <span>Balance</span>
                         <span>{formatCurrency(calculateTotals().balance)}</span>
                       </div>
+                      {calculateTotals().balance < 0 && (
+                        <p className="text-xs text-orange-600">
+                          Payments exceed grand total by {formatCurrency(Math.abs(calculateTotals().balance))}.
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
