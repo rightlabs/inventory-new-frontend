@@ -710,43 +710,39 @@ export default function SalesForm({
                     />
                   </div>
 
-                  {Number(formData.amountPaid) > 0 && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">Payment Mode</label>
-                        <Select
-                          value={formData.paymentMode}
-                          onValueChange={(value: "cash" | "cheque" | "online") =>
-                            setFormData((prev) => ({ ...prev, paymentMode: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="cheque">Cheque</SelectItem>
-                            <SelectItem value="online">Online</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Payment Mode</label>
+                    <Select
+                      value={formData.paymentMode}
+                      onValueChange={(value: "cash" | "cheque" | "online") =>
+                        setFormData((prev) => ({ ...prev, paymentMode: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="cheque">Cheque</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                      {formData.paymentMode !== "cash" && (
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Reference Number</label>
-                          <Input
-                            value={formData.paymentReference}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                paymentReference: e.target.value,
-                              }))
-                            }
-                            placeholder="Enter reference number"
-                          />
-                        </div>
-                      )}
-                    </>
+                  {Number(formData.amountPaid) > 0 && formData.paymentMode !== "cash" && (
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Reference Number</label>
+                      <Input
+                        value={formData.paymentReference}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            paymentReference: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter reference number"
+                      />
+                    </div>
                   )}
                 </div>
 

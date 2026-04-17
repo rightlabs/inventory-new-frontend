@@ -37,3 +37,5 @@ next-env.d.ts
 
 #sw map file
 /public/sw.js.map
+# Use bun, not npm
+package-lock.json
