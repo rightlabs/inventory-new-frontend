@@ -257,7 +257,7 @@ export default function VendorsPage() {
                       <td className="p-4 align-middle">{vendor.phone || "-"}</td>
                       <td className="p-4 align-middle">{vendor.gstin || "-"}</td>
                       <td className="p-4 align-middle text-right">
-                        {vendor.creditLimit ? `₹${vendor.creditLimit.toLocaleString()}` : "-"}
+                        {vendor.creditLimit ? formatCurrency(vendor.creditLimit) : "-"}
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatCurrency(vendor?.currentBalance)}

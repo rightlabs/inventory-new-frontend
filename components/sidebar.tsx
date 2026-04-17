@@ -10,6 +10,7 @@ import {
   Building2,
   Store,
   Warehouse,
+  BarChart3,
 } from "lucide-react";
 import LogoutButton from "./logout-button";
 import { useUser } from "@/contexts/userContext";
@@ -50,6 +51,12 @@ const routes = [
     icon: Warehouse,
     href: "/inventory",
     roles: ["admin", "sales"],
+  },
+  {
+    label: "MIS Reports",
+    icon: BarChart3,
+    href: "/analytics",
+    roles: ["admin"],
   },
 ];
 

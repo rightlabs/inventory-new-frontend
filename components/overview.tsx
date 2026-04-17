@@ -7,6 +7,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+import { formatINR } from "@/utils/format";
 
 interface MonthlyData {
   month: string;
@@ -53,7 +54,7 @@ export function Overview({ data }: OverviewProps) {
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             }}
             labelStyle={{ color: "#1E293B", fontWeight: 500 }}
-            formatter={(value) => [`₹${value.toLocaleString()}`]}
+            formatter={(value: number) => [formatINR(value)]}
           />
           <Bar
             dataKey="revenue"

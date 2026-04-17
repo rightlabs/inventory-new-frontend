@@ -25,6 +25,7 @@ import {
   Package,
   IndianRupee,
   HelpCircle,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Tooltip,
@@ -196,7 +197,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Third Row - Financial Health */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         {/* Receivables */}
         <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-4">
@@ -241,6 +242,30 @@ export default function DashboardPage() {
                 </p>
               </div>
               <ArrowDownRight className="h-8 w-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Purchase */}
+        <Card className="border-l-4 border-l-amber-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  Total Purchase
+                  <Tooltip>
+                    <TooltipTrigger><HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" /></TooltipTrigger>
+                    <TooltipContent><p>अब तक की कुल खरीदारी की कीमत</p></TooltipContent>
+                  </Tooltip>
+                </p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {formatCurrency(dashboardData.metrics.totalPurchase.total)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  कुल खरीदारी की रकम
+                </p>
+              </div>
+              <ShoppingBag className="h-8 w-8 text-amber-500" />
             </div>
           </CardContent>
         </Card>

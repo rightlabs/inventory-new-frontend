@@ -9,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import { MonthlyData } from "@/types/type";
+import { formatINR } from "@/utils/format";
 
 interface RevenueSummaryProps {
   data: MonthlyData[];
@@ -42,10 +43,7 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
               <XAxis dataKey="month" />
               <YAxis tickFormatter={(value: number) => `₹${value / 1000}K`} />
               <Tooltip
-                formatter={(value: number) => [
-                  `₹${value.toLocaleString()}`,
-                  "",
-                ]}
+                formatter={(value: number) => [formatINR(value), ""]}
                 labelStyle={{ color: "#1E293B" }}
               />
               <Legend />
@@ -78,13 +76,13 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
           <div>
             <p className="text-sm text-gray-500">Total Revenue</p>
             <p className="text-lg font-medium text-green-600">
-              ₹{totalRevenue.toLocaleString()}
+              {formatINR(totalRevenue)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Costs</p>
             <p className="text-lg font-medium text-red-600">
-              ₹{totalCosts.toLocaleString()}
+              {formatINR(totalCosts)}
             </p>
           </div>
           <div className="pt-2 border-t">
@@ -94,7 +92,7 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
                 netProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
-              ₹{netProfit.toLocaleString()}
+              {formatINR(netProfit)}
             </p>
           </div>
         </div>

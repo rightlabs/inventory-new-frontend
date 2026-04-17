@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { addPayment, addSalePayment } from "@/api/transaction";
 import toast from "react-hot-toast";
+import { formatINR } from "@/utils/format";
 
 // Interfaces
 interface Sale {
@@ -143,7 +144,7 @@ export default function PaymentModal({
         <div>
           <span className="block text-sm font-medium mb-2">Balance Amount</span>
           <span className="text-sm">
-            ₹{document.balanceAmount.toLocaleString()}
+            {formatINR(document.balanceAmount)}
           </span>
         </div>
 

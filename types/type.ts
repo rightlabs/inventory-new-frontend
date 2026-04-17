@@ -225,6 +225,7 @@ export interface DashboardMetric {
 export interface DashboardMetrics {
   totalSales: DashboardMetric;
   totalPurchase: DashboardMetric;
+  cogs: DashboardMetric;
   grossProfits: DashboardMetric;
 }
 

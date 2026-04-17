@@ -20,6 +20,7 @@ import { getItems } from "@/api/items";
 import SaleForm from "@/components/Forms/SaleForm";
 import PaymentModal from "@/components/Forms/PaymentModal";
 import ReturnItemsModal from "@/components/Sale/ReturnItemsModal";
+import { formatINR } from "@/utils/format";
 
 export default function SalesPage() {
   const [open, setOpen] = useState(false);
@@ -300,10 +301,10 @@ export default function SalesPage() {
                         </div>
                       </td>
                       <td className="p-4 align-middle text-right">
-                        ₹{sale.grandTotal.toLocaleString()}
+                        {formatINR(sale.grandTotal)}
                       </td>
                       <td className="p-4 align-middle text-center">
-                        ₹{sale.balanceAmount.toLocaleString()}
+                        {formatINR(sale.balanceAmount)}
                       </td>
                       <td className="p-4 align-middle">
                         <StatusBadge status={sale.status} />

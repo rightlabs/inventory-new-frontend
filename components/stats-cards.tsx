@@ -78,10 +78,10 @@ export function StatsCards({ metrics }: { metrics: DashboardMetrics }) {
         todayAmount={metrics.totalSales.todayAmount}
       />
       <StatsCard
-        title="Total Purchase"
-        amount={metrics.totalPurchase.total}
-        percentageChange={metrics.totalPurchase.percentageChange}
-        todayAmount={metrics.totalPurchase.todayAmount}
+        title="COGS"
+        amount={metrics.cogs.total}
+        percentageChange={metrics.cogs.percentageChange}
+        todayAmount={metrics.cogs.todayAmount}
       />
       <StatsCard
         title={metrics.grossProfits.total >= 0 ? "Gross Profit" : "Gross Loss"}

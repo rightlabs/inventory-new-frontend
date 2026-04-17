@@ -1,4 +1,5 @@
 import { InventoryStats } from "@/types/type";
+import { formatINR } from "@/utils/format";
 
 interface InventoryStatusProps {
   stats: InventoryStats;
@@ -54,10 +55,12 @@ export function InventoryStatus({ stats }: InventoryStatusProps) {
           <span className="text-sm text-blue-700">Total Value</span>
         </div>
         <p className="text-4xl font-bold text-blue-900">
-          ₹
-          {stats.valueByCategory
-            .reduce((acc, cat) => acc + cat.totalValue, 0)
-            .toLocaleString()}
+          {formatINR(
+            stats.valueByCategory.reduce(
+              (acc, cat) => acc + cat.totalValue,
+              0
+            )
+          )}
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,23 +9,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ArrowDown,
-  ArrowUp,
   Download,
   IndianRupee,
   TrendingUp,
   ShoppingCart,
-  Users,
   Package,
+  Percent,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  AlertCircle,
+  CircleDollarSign,
 } from "lucide-react";
 import {
   LineChart,
@@ -36,931 +35,580 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
+import toast from "react-hot-toast";
+import { getMisSummary, getMisSalesExport, MisSummary } from "@/api/mis";
+import { getSales } from "@/api/sale";
 
-// Interfaces for type safety
-interface FinancialMetric {
-  label: string;
-  value: number;
-  change: number;
-  trend: "up" | "down";
-  prefix?: string;
-  format?: "currency" | "number" | "percentage";
-}
+const PAGE_SIZE = 10;
 
-interface ProfitLossItem {
-  category: string;
-  amount: number;
-  previousAmount: number;
-  change: number;
-}
-
-// Sample data
-const monthlySales = [
-  { month: "Jan", sales: 2356000, purchases: 1890000 },
-  { month: "Feb", sales: 2890000, purchases: 2100000 },
-  { month: "Mar", sales: 2760000, purchases: 1950000 },
-  // ... add more months
-];
-
-const categoryDistribution = [
-  { name: "Pipes", value: 45 },
-  { name: "Sheets", value: 25 },
-  { name: "Fittings", value: 20 },
-  { name: "Polish Items", value: 10 },
-];
-
-const plData = {
-  revenue: [
-    {
-      category: "Pipe Sales",
-      amount: 2890000,
-      previousAmount: 2650000,
-      change: 9.1,
-    },
-    {
-      category: "Sheet Sales",
-      amount: 1560000,
-      previousAmount: 1420000,
-      change: 9.9,
-    },
-    {
-      category: "Fittings Sales",
-      amount: 980000,
-      previousAmount: 850000,
-      change: 15.3,
-    },
-    {
-      category: "Polish Items Sales",
-      amount: 450000,
-      previousAmount: 380000,
-      change: 18.4,
-    },
-  ],
-  expenses: [
-    {
-      category: "Pipe Purchases",
-      amount: 2100000,
-      previousAmount: 1950000,
-      change: 7.7,
-    },
-    {
-      category: "Sheet Purchases",
-      amount: 1200000,
-      previousAmount: 1100000,
-      change: 9.1,
-    },
-    {
-      category: "Fittings Purchases",
-      amount: 720000,
-      previousAmount: 650000,
-      change: 10.8,
-    },
-    {
-      category: "Polish Items Purchases",
-      amount: 280000,
-      previousAmount: 250000,
-      change: 12.0,
-    },
-    {
-      category: "Operating Expenses",
-      amount: 350000,
-      previousAmount: 320000,
-      change: 9.4,
-    },
-  ],
+// YYYY-MM-DD in local time (not UTC, which shifts by timezone).
+const toDateInput = (d: Date) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 };
 
-const COLORS = ["#7C3AED", "#EDC53A", "#3AEDC5", "#ED7C3A"];
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+
+const formatNumber = (n: number) =>
+  new Intl.NumberFormat("en-IN").format(n || 0);
+
+const csvEscape = (v: unknown) => {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+};
+
+const rowsToCsv = (rows: Record<string, unknown>[], headers: string[]) => {
+  const head = headers.map(csvEscape).join(",");
+  const body = rows
+    .map((r) => headers.map((h) => csvEscape(r[h])).join(","))
+    .join("\n");
+  return head + "\n" + body;
+};
+
+const downloadCsv = (csv: string, filename: string) => {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const STATUS_BADGE: Record<
+  string,
+  { label: string; className: string; Icon: typeof CheckCircle2 }
+> = {
+  delivered: {
+    label: "Delivered",
+    className:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+    Icon: CheckCircle2,
+  },
+  pending: {
+    label: "Pending",
+    className:
+      "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+    Icon: Clock,
+  },
+  cancelled: {
+    label: "Cancelled",
+    className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+    Icon: XCircle,
+  },
+};
+
+const PAYMENT_BADGE: Record<
+  string,
+  { label: string; className: string; Icon: typeof CheckCircle2 }
+> = {
+  paid: {
+    label: "Paid",
+    className:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+    Icon: CircleDollarSign,
+  },
+  partial: {
+    label: "Partial",
+    className:
+      "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+    Icon: Clock,
+  },
+  unpaid: {
+    label: "Unpaid",
+    className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+    Icon: AlertCircle,
+  },
+};
+
+function Badge({
+  value,
+  map,
+}: {
+  value: string;
+  map: typeof STATUS_BADGE;
+}) {
+  const cfg = map[value] || {
+    label: value,
+    className: "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-200",
+    Icon: AlertCircle,
+  };
+  const { Icon } = cfg;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${cfg.className}`}
+    >
+      <Icon className="h-3 w-3" />
+      {cfg.label}
+    </span>
+  );
+}
+
+interface SaleRow {
+  _id: string;
+  saleNumber: string;
+  date: string;
+  customer: { _id: string; name: string; gstin?: string };
+  grandTotal: number;
+  discount: number;
+  balanceAmount: number;
+  status: string;
+  paymentStatus: string;
+}
 
 export default function AnalyticsPage() {
-  const [timeframe, setTimeframe] = useState("month");
+  const today = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Calculate key metrics
-  const totalRevenue = plData.revenue.reduce(
-    (sum, item) => sum + item.amount,
-    0
-  );
-  const totalExpenses = plData.expenses.reduce(
-    (sum, item) => sum + item.amount,
-    0
-  );
-  const grossProfit = totalRevenue - totalExpenses;
-  const grossMargin = (grossProfit / totalRevenue) * 100;
+  const [startDate, setStartDate] = useState(toDateInput(thirtyDaysAgo));
+  const [endDate, setEndDate] = useState(toDateInput(today));
 
-  const metrics: FinancialMetric[] = [
-    {
-      label: "Total Revenue",
-      value: totalRevenue,
-      change: 12.5,
-      trend: "up",
-      prefix: "₹",
-      format: "currency",
-    },
-    {
-      label: "Gross Profit",
-      value: grossProfit,
-      change: 15.2,
-      trend: "up",
-      prefix: "₹",
-      format: "currency",
-    },
-    {
-      label: "Gross Margin",
-      value: grossMargin,
-      change: 2.3,
-      trend: "up",
-      format: "percentage",
-    },
-    {
-      label: "Total Orders",
-      value: 342,
-      change: 8.1,
-      trend: "up",
-      format: "number",
-    },
-  ];
+  const [summary, setSummary] = useState<MisSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
-  // Format currency values
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const [sales, setSales] = useState<SaleRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [salesLoading, setSalesLoading] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
+
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const res = await getMisSummary(startDate, endDate);
+      setSummary(res.data);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load MIS summary");
+    } finally {
+      setSummaryLoading(false);
+    }
   };
 
-  // Render metric card
-  const MetricCard = ({ metric }: { metric: FinancialMetric }) => {
-    const formattedValue =
-      metric.format === "currency"
-        ? formatCurrency(metric.value)
-        : metric.format === "percentage"
-        ? `${metric.value.toFixed(1)}%`
-        : metric.value.toLocaleString();
-
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-muted-foreground">{metric.label}</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline">
-                <h3 className="text-2xl font-semibold">{formattedValue}</h3>
-              </div>
-              <div
-                className={`flex items-center gap-1 text-sm ${
-                  metric.trend === "up"
-                    ? "text-success-600"
-                    : "text-destructive"
-                }`}
-              >
-                {metric.trend === "up" ? (
-                  <ArrowUp className="h-4 w-4" />
-                ) : (
-                  <ArrowDown className="h-4 w-4" />
-                )}
-                {metric.change}%
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const fetchSales = async (targetPage = page) => {
+    setSalesLoading(true);
+    try {
+      const res = await getSales({
+        page: targetPage,
+        limit: PAGE_SIZE,
+        startDate,
+        endDate,
+      });
+      const payload = res?.data?.data;
+      setSales(payload?.sales || []);
+      setTotalPages(payload?.pagination?.totalPages || 1);
+      setTotalItems(payload?.pagination?.totalItems || 0);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load sales");
+    } finally {
+      setSalesLoading(false);
+    }
   };
+
+  useEffect(() => {
+    setPage(1);
+    fetchSummary();
+    fetchSales(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchSales(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await getMisSalesExport(startDate, endDate);
+      const rows = res.data.rows;
+      if (!rows || rows.length === 0) {
+        toast("No sales in this date range to export");
+        return;
+      }
+      const headers = [
+        "saleNumber",
+        "date",
+        "customer",
+        "gstin",
+        "phone",
+        "status",
+        "paymentStatus",
+        "itemName",
+        "itemType",
+        "quantity",
+        "weight",
+        "rate",
+        "sellingPrice",
+        "itemAmount",
+        "subtotal",
+        "discountAmount",
+        "additionalCharges",
+        "grandTotal",
+        "totalPaid",
+        "balance",
+        "paymentModes",
+      ];
+      const csv = rowsToCsv(rows as unknown as Record<string, unknown>[], headers);
+      downloadCsv(csv, `sales-${startDate}-to-${endDate}.csv`);
+      toast.success(`Exported ${rows.length} row(s)`);
+      if (res.data.truncated) {
+        toast("Export was truncated at the server limit — narrow the range.", {
+          icon: "⚠️",
+        });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const kpis = summary?.kpis;
+
+  const kpiCards = useMemo(() => {
+    if (!kpis) return [];
+    return [
+      {
+        label: "Total Revenue",
+        value: formatCurrency(kpis.totalRevenue),
+        icon: IndianRupee,
+        tone: "text-primary",
+        sub: `${formatNumber(kpis.salesCount)} sale(s)`,
+      },
+      {
+        label: "Gross Profit",
+        value: formatCurrency(kpis.grossProfit),
+        icon: TrendingUp,
+        tone: kpis.grossProfit >= 0 ? "text-emerald-600" : "text-red-600",
+        sub: `Margin ${kpis.grossMargin.toFixed(2)}%`,
+      },
+      {
+        label: "COGS",
+        value: formatCurrency(kpis.totalCogs),
+        icon: Package,
+        tone: "text-slate-600",
+        sub: "Cost of goods sold",
+      },
+      {
+        label: "Purchases",
+        value: formatCurrency(kpis.totalPurchases),
+        icon: ShoppingCart,
+        tone: "text-slate-600",
+        sub: `${formatNumber(kpis.purchaseCount)} order(s)`,
+      },
+      {
+        label: "Avg. Sale Value",
+        value: formatCurrency(kpis.avgOrderValue),
+        icon: IndianRupee,
+        tone: "text-slate-600",
+        sub: "Per sale order",
+      },
+      {
+        label: "Discounts Given",
+        value: formatCurrency(kpis.totalDiscount),
+        icon: Percent,
+        tone: "text-slate-600",
+        sub: "Total in range",
+      },
+    ];
+  }, [kpis]);
+
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      {/* Header + Date Range */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight">MIS Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            View financial reports and business insights
+            Revenue, profit, and orders — filtered by date range.
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Select defaultValue="month" onValueChange={setTimeframe}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Select timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" /> Export Report
+        <div className="flex items-end gap-3 flex-wrap">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">
+              From
+            </label>
+            <Input
+              type="date"
+              value={startDate}
+              max={endDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">
+              To
+            </label>
+            <Input
+              type="date"
+              value={endDate}
+              min={startDate}
+              max={toDateInput(today)}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+          <Button onClick={handleExport} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((metric, index) => (
-          <MetricCard key={index} metric={metric} />
-        ))}
-      </div>
-
-      {/* Tabs for different reports */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="category">Category Analysis</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {/* Revenue vs Expenses Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue vs Expenses</CardTitle>
-                <CardDescription>
-                  Monthly comparison of revenue and expenses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlySales}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="sales"
-                        stroke="#7C3AED"
-                        name="Revenue"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="purchases"
-                        stroke="#EDC53A"
-                        name="Expenses"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Category Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Distribution</CardTitle>
-                <CardDescription>
-                  Distribution by product category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name} (${(percent * 100).toFixed(0)}%)`
-                        }
-                        outerRadius={150}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {categoryDistribution.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Profit & Loss Tab */}
-        <TabsContent value="profit-loss">
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {summaryLoading && !summary && (
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>Profit & Loss Statement</CardTitle>
-                  <CardDescription>
-                    Detailed analysis of revenue and expenses
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" /> Export P&L
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Revenue Section */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Revenue</h3>
-                  <div className="rounded-md border">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="h-12 px-4 text-left align-middle text-sm font-medium">
-                            Category
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Amount
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Previous
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Change
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {plData.revenue.map((item, index) => (
-                          <tr key={index} className="border-b">
-                            <td className="p-4">{item.category}</td>
-                            <td className="p-4 text-right">
-                              {formatCurrency(item.amount)}
-                            </td>
-                            <td className="p-4 text-right">
-                              {formatCurrency(item.previousAmount)}
-                            </td>
-                            <td className="p-4 text-right">
-                              <span
-                                className={
-                                  item.change >= 0
-                                    ? "text-success-600"
-                                    : "text-destructive"
-                                }
-                              >
-                                {item.change >= 0 ? "+" : ""}
-                                {item.change}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className="border-b bg-muted/50 font-medium">
-                          <td className="p-4">Total Revenue</td>
-                          <td className="p-4 text-right">
-                            {formatCurrency(totalRevenue)}
-                          </td>
-                          <td className="p-4 text-right"></td>
-                          <td className="p-4 text-right"></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Expenses Section */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Expenses</h3>
-                  <div className="rounded-md border">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="h-12 px-4 text-left align-middle text-sm font-medium">
-                            Category
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Amount
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Previous
-                          </th>
-                          <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                            Change
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {plData.expenses.map((item, index) => (
-                          <tr key={index} className="border-b">
-                            <td className="p-4">{item.category}</td>
-                            <td className="p-4 text-right">
-                              {formatCurrency(item.amount)}
-                            </td>
-                            <td className="p-4 text-right">
-                              {formatCurrency(item.previousAmount)}
-                            </td>
-                            <td className="p-4 text-right">
-                              <span
-                                className={
-                                  item.change >= 0
-                                    ? "text-destructive"
-                                    : "text-success-600"
-                                }
-                              >
-                                {item.change >= 0 ? "+" : ""}
-                                {item.change}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className="border-b bg-muted/50 font-medium">
-                          <td className="p-4">Total Expenses</td>
-                          <td className="p-4 text-right">
-                            {formatCurrency(totalExpenses)}
-                          </td>
-                          <td className="p-4 text-right"></td>
-                          <td className="p-4 text-right"></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Summary Section */}
-                <div className="rounded-md border p-4 bg-muted/50">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Gross Profit
-                      </p>
-                      <p className="text-2xl font-semibold">
-                        {formatCurrency(grossProfit)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Gross Margin
-                      </p>
-                      <p className="text-2xl font-semibold">
-                        {grossMargin.toFixed(1)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Net Growth
-                      </p>
-                      <p className="text-2xl font-semibold text-success-600">
-                        +12.5%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <CardContent className="pt-6 text-muted-foreground">
+              Loading summary...
             </CardContent>
           </Card>
-        </TabsContent>
-        {/* Category Analysis Tab */}
-        <TabsContent value="category">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {/* Category Performance */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Performance</CardTitle>
-                <CardDescription>
-                  Revenue and profit by product category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={plData.revenue}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis />
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="amount"
-                        fill="#7C3AED"
-                        name="Current Period"
-                      />
-                      <Bar
-                        dataKey="previousAmount"
-                        fill="#EDC53A"
-                        name="Previous Period"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+        )}
+        {kpiCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card key={card.label}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">
+                    {card.label}
+                  </span>
+                  <Icon className={`h-5 w-5 ${card.tone}`} />
+                </div>
+                <div className={`text-2xl font-semibold ${card.tone}`}>
+                  {card.value}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {card.sub}
                 </div>
               </CardContent>
             </Card>
+          );
+        })}
+      </div>
 
-            {/* Category Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Metrics</CardTitle>
-                <CardDescription>
-                  Key performance indicators by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle text-sm font-medium">
-                          Category
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Revenue
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Growth
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Margin
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {plData.revenue.map((item, index) => {
-                        const expense = plData.expenses[index];
-                        const margin = (
-                          ((item.amount - expense.amount) / item.amount) *
-                          100
-                        ).toFixed(1);
-
-                        return (
-                          <tr key={index} className="border-b">
-                            <td className="p-4">{item.category}</td>
-                            <td className="p-4 text-right">
-                              {formatCurrency(item.amount)}
-                            </td>
-                            <td className="p-4 text-right">
-                              <span
-                                className={
-                                  item.change >= 0
-                                    ? "text-success-600"
-                                    : "text-destructive"
-                                }
-                              >
-                                {item.change >= 0 ? "+" : ""}
-                                {item.change}%
-                              </span>
-                            </td>
-                            <td className="p-4 text-right">{margin}%</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Stock Value by Category */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Value</CardTitle>
-                <CardDescription>
-                  Current stock value by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: "Pipes", value: 1250000 },
-                          { name: "Sheets", value: 850000 },
-                          { name: "Fittings", value: 450000 },
-                          { name: "Polish Items", value: 250000 },
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) =>
-                          `${name} (${formatCurrency(value)})`
-                        }
-                        outerRadius={150}
-                        fill="#8884d8"
-                        dataKey="value"
+      {/* Category Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Category Performance</CardTitle>
+          <CardDescription>
+            Item-level revenue and margin per category in the selected range.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {summary && summary.categoryBreakdown.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">
+              No sales in this range.
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left font-medium">Category</th>
+                    <th className="p-3 text-right font-medium">Items Sold</th>
+                    <th className="p-3 text-right font-medium">Revenue</th>
+                    <th className="p-3 text-right font-medium">COGS</th>
+                    <th className="p-3 text-right font-medium">Profit</th>
+                    <th className="p-3 text-right font-medium">Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(summary?.categoryBreakdown || []).map((c) => (
+                    <tr key={c.category} className="border-b last:border-b-0">
+                      <td className="p-3 capitalize">{c.category}</td>
+                      <td className="p-3 text-right">{formatNumber(c.count)}</td>
+                      <td className="p-3 text-right">
+                        {formatCurrency(c.revenue)}
+                      </td>
+                      <td className="p-3 text-right">
+                        {formatCurrency(c.cogs)}
+                      </td>
+                      <td
+                        className={`p-3 text-right ${
+                          c.profit >= 0 ? "text-emerald-600" : "text-red-600"
+                        }`}
                       >
-                        {categoryDistribution.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                        {formatCurrency(c.profit)}
+                      </td>
+                      <td
+                        className={`p-3 text-right ${
+                          c.margin >= 0 ? "text-emerald-600" : "text-red-600"
+                        }`}
+                      >
+                        {c.margin.toFixed(2)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Top Products */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Products</CardTitle>
-                <CardDescription>
-                  Best performing products by revenue
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle text-sm font-medium">
-                          Product
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Revenue
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Units
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Profit
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          name: "SS Pipe 80x80",
-                          revenue: 580000,
-                          units: 250,
-                          profit: 145000,
-                        },
-                        {
-                          name: "SS Sheet 8x4",
-                          revenue: 420000,
-                          units: 180,
-                          profit: 126000,
-                        },
-                        {
-                          name: "Ball with Nut",
-                          revenue: 320000,
-                          units: 1500,
-                          profit: 96000,
-                        },
-                        {
-                          name: "Flap Disc 60",
-                          revenue: 180000,
-                          units: 2000,
-                          profit: 54000,
-                        },
-                      ].map((product, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-4">{product.name}</td>
-                          <td className="p-4 text-right">
-                            {formatCurrency(product.revenue)}
-                          </td>
-                          <td className="p-4 text-right">{product.units}</td>
-                          <td className="p-4 text-right">
-                            {formatCurrency(product.profit)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Daily trend */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily Revenue vs Purchases</CardTitle>
+          <CardDescription>
+            Day-by-day view of sales (excluding cancelled) and purchases.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[320px]">
+            {summary && summary.dailySeries.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                No activity in this range.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={summary?.dailySeries || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#7C3AED"
+                    name="Revenue"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="purchases"
+                    stroke="#EDC53A"
+                    name="Purchases"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        {/* Trends Tab */}
-        <TabsContent value="trends">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {/* Monthly Trends */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Monthly Performance Trends</CardTitle>
-                <CardDescription>
-                  Revenue, expenses, and profit trends over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={[
-                        {
-                          month: "Jan",
-                          revenue: 2356000,
-                          expenses: 1890000,
-                          profit: 466000,
-                        },
-                        {
-                          month: "Feb",
-                          revenue: 2890000,
-                          expenses: 2100000,
-                          profit: 790000,
-                        },
-                        {
-                          month: "Mar",
-                          revenue: 2760000,
-                          expenses: 1950000,
-                          profit: 810000,
-                        },
-                        {
-                          month: "Apr",
-                          revenue: 3120000,
-                          expenses: 2250000,
-                          profit: 870000,
-                        },
-                        {
-                          month: "May",
-                          revenue: 2980000,
-                          expenses: 2180000,
-                          profit: 800000,
-                        },
-                        {
-                          month: "Jun",
-                          revenue: 3250000,
-                          expenses: 2320000,
-                          profit: 930000,
-                        },
-                      ]}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#7C3AED"
-                        name="Revenue"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="expenses"
-                        stroke="#EDC53A"
-                        name="Expenses"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="profit"
-                        stroke="#3AEDC5"
-                        name="Profit"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Growth Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Growth Metrics</CardTitle>
-                <CardDescription>
-                  Year-over-year growth analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle text-sm font-medium">
-                          Metric
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Current
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Previous
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle text-sm font-medium">
-                          Growth
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          metric: "Revenue",
-                          current: 5880000,
-                          previous: 5120000,
-                          growth: 14.8,
-                        },
-                        {
-                          metric: "Gross Profit",
-                          current: 1680000,
-                          previous: 1380000,
-                          growth: 21.7,
-                        },
-                        {
-                          metric: "Average Order Value",
-                          current: 28500,
-                          previous: 25800,
-                          growth: 10.5,
-                        },
-                        {
-                          metric: "Customer Count",
-                          current: 185,
-                          previous: 165,
-                          growth: 12.1,
-                        },
-                      ].map((item, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-4">{item.metric}</td>
-                          <td className="p-4 text-right">
-                            {item.metric.includes("Count")
-                              ? item.current
-                              : formatCurrency(item.current)}
-                          </td>
-                          <td className="p-4 text-right">
-                            {item.metric.includes("Count")
-                              ? item.previous
-                              : formatCurrency(item.previous)}
-                          </td>
-                          <td className="p-4 text-right">
-                            <span
-                              className={
-                                item.growth >= 0
-                                  ? "text-success-600"
-                                  : "text-destructive"
-                              }
-                            >
-                              {item.growth >= 0 ? "+" : ""}
-                              {item.growth}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Margin Analysis */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Margin Analysis</CardTitle>
-                <CardDescription>
-                  Profitability trends by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { category: "Pipes", current: 28.5, previous: 26.2 },
-                        { category: "Sheets", current: 32.1, previous: 29.8 },
-                        { category: "Fittings", current: 35.8, previous: 33.5 },
-                        {
-                          category: "Polish Items",
-                          current: 38.2,
-                          previous: 36.4,
-                        },
-                      ]}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => `${value}%`} />
-                      <Legend />
-                      <Bar
-                        dataKey="current"
-                        fill="#7C3AED"
-                        name="Current Margin %"
-                      />
-                      <Bar
-                        dataKey="previous"
-                        fill="#EDC53A"
-                        name="Previous Margin %"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Sales Orders Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Sales Orders</CardTitle>
+              <CardDescription>
+                {formatNumber(totalItems)} order(s) in range — page {page} of{" "}
+                {totalPages}
+              </CardDescription>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="p-3 text-left font-medium">#</th>
+                  <th className="p-3 text-left font-medium">Date</th>
+                  <th className="p-3 text-left font-medium">Customer</th>
+                  <th className="p-3 text-right font-medium">Grand Total</th>
+                  <th className="p-3 text-right font-medium">Balance</th>
+                  <th className="p-3 text-left font-medium">Status</th>
+                  <th className="p-3 text-left font-medium">Payment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesLoading && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                      Loading...
+                    </td>
+                  </tr>
+                )}
+                {!salesLoading && sales.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                      No sales in this range.
+                    </td>
+                  </tr>
+                )}
+                {!salesLoading &&
+                  sales.map((s) => (
+                    <tr key={s._id} className="border-b last:border-b-0">
+                      <td className="p-3 font-medium">{s.saleNumber}</td>
+                      <td className="p-3">
+                        {new Date(s.date).toLocaleDateString("en-IN")}
+                      </td>
+                      <td className="p-3">{s.customer?.name || "—"}</td>
+                      <td className="p-3 text-right">
+                        {formatCurrency(s.grandTotal)}
+                      </td>
+                      <td className="p-3 text-right">
+                        {formatCurrency(s.balanceAmount)}
+                      </td>
+                      <td className="p-3">
+                        <Badge value={s.status} map={STATUS_BADGE} />
+                      </td>
+                      <td className="p-3">
+                        <Badge value={s.paymentStatus} map={PAYMENT_BADGE} />
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4 text-sm">
+            <span className="text-muted-foreground">
+              Showing {(page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, totalItems)} of{" "}
+              {formatNumber(totalItems)}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || salesLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages || salesLoading}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
