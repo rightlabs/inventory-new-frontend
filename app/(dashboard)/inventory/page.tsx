@@ -25,10 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit2, Package, History } from "lucide-react";
+import { Edit2, Package, History, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
+import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import {
   BaseItem,
@@ -104,6 +105,7 @@ export default function ItemsPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("pipes");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -237,7 +239,7 @@ export default function ItemsPage() {
     }
     return (
       <table className="w-full">
-        <thead>
+        <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Name
@@ -337,7 +339,7 @@ export default function ItemsPage() {
     }
     return (
       <table className="w-full">
-        <thead>
+        <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Name
@@ -442,7 +444,7 @@ export default function ItemsPage() {
     }
     return (
       <table className="w-full">
-        <thead>
+        <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
               Name
@@ -663,13 +665,21 @@ export default function ItemsPage() {
             Manage your inventory items and stock levels
           </p>
         </div>
-        <Dialog
-          open={open}
-          onOpenChange={(isOpen) => {
-            setOpen(isOpen);
-            if (!isOpen) setSelectedItem(null);
-          }}
-        >
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary/10"
+            onClick={() => setReturnOpen(true)}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Return to Inventory
+          </Button>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              setOpen(isOpen);
+              if (!isOpen) setSelectedItem(null);
+            }}
+          >
           {/* <DialogTrigger asChild>
             <Button className="bg-primary">
               <Plus className="mr-2 h-4 w-4" /> Add Item
@@ -692,8 +702,16 @@ export default function ItemsPage() {
               onCancel={() => setOpen(false)}
             />
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
+      <ReturnInventoryModal
+        open={returnOpen}
+        onOpenChange={setReturnOpen}
+        items={items}
+        onSuccess={fetchItems}
+      />
 
       {/* Search and Filter Section */}
       <Card>
@@ -740,7 +758,7 @@ export default function ItemsPage() {
                   Loading...
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPipeSheetTable(filteredItems as PipeSheetItem[])}
                 </div>
               )}
@@ -761,7 +779,7 @@ export default function ItemsPage() {
                   Loading...
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPipeSheetTable(filteredItems as PipeSheetItem[])}
                 </div>
               )}
@@ -784,7 +802,7 @@ export default function ItemsPage() {
                   Loading...
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderFittingTable(filteredItems as FittingItem[])}
                 </div>
               )}
@@ -807,7 +825,7 @@ export default function ItemsPage() {
                   Loading...
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPolishTable(
                     // Make sure we're only passing Polish items
                     filteredItems.filter((item) => item.itemType === "Polish")

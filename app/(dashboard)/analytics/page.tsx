@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import DataPagination from "@/components/DataPagination";
 import {
   Card,
   CardContent,
@@ -17,8 +18,6 @@ import {
   ShoppingCart,
   Package,
   Percent,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   CheckCircle2,
   Clock,
@@ -56,7 +55,7 @@ const formatCurrency = (amount: number) =>
     currency: "INR",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount || 0);
+  }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
 
 const formatNumber = (n: number) =>
   new Intl.NumberFormat("en-IN").format(n || 0);
@@ -424,9 +423,9 @@ export default function AnalyticsPage() {
               No sales in this range.
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border overflow-auto max-h-[70vh]">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="p-3 text-left font-medium">Category</th>
                     <th className="p-3 text-right font-medium">Items Sold</th>
@@ -527,9 +526,9 @@ export default function AnalyticsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-md border overflow-auto max-h-[70vh]">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                 <tr className="border-b bg-muted/50">
                   <th className="p-3 text-left font-medium">#</th>
                   <th className="p-3 text-left font-medium">Date</th>
@@ -588,24 +587,12 @@ export default function AnalyticsPage() {
               {Math.min(page * PAGE_SIZE, totalItems)} of{" "}
               {formatNumber(totalItems)}
             </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1 || salesLoading}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages || salesLoading}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+            <DataPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p)}
+              disabled={salesLoading}
+            />
           </div>
         </CardContent>
       </Card>

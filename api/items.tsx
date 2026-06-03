@@ -96,3 +96,24 @@ export const getPurchaseHistory = async (itemId: string) => {
     throw error;
   }
 };
+
+export interface InventoryReturnLine {
+  itemId: string;
+  weight?: number;
+  quantity?: number;
+  pieces?: number;
+  rate: number;
+}
+
+export const addInventoryReturn = async (data: {
+  date?: string;
+  notes?: string;
+  items: InventoryReturnLine[];
+}) => {
+  try {
+    const res = await API_INSTANCE.post("/items/return", data);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};

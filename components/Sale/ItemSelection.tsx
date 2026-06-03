@@ -445,6 +445,47 @@ export default function ItemSelection({
               )}
             </div>
 
+            {/* Pieces — shown for any weight-sold item (pipe/sheet + kg-sold
+                fittings/polish). Pricing stays by weight; this only records how many
+                physical pieces leave stock so the countable inventory stays accurate. */}
+            {selectedProduct.unitType === "weight" && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  {selectedProduct.itemType === "PipeSheet" ? "Pieces*" : "Pieces"}
+                </label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={item.pieces ?? ""}
+                  onChange={(e) => {
+                    const value = sanitizeNumericInput(e.target.value);
+                    if (value === "") {
+                      onItemChange(index, { ...item, pieces: "" });
+                      return;
+                    }
+                    const numValue = parseFloat(value);
+                    if (isNaN(numValue)) return;
+                    // Mirror the other numeric inputs: keep the raw string while a
+                    // decimal is mid-type, otherwise store the parsed number.
+                    const preserveAsString =
+                      value.endsWith(".") || (value.includes(".") && value.endsWith("0"));
+                    onItemChange(index, {
+                      ...item,
+                      pieces: preserveAsString ? value : numValue,
+                    });
+                  }}
+                  onKeyDown={handleNumericKeyDown}
+                  placeholder="Enter pieces"
+                />
+                {Number(item.pieces) > ((selectedProduct as any).pieces ?? 0) && (
+                  <p className="text-amber-600 text-xs mt-1">
+                    Only {(selectedProduct as any).pieces ?? 0} pcs in stock — sale allowed,
+                    pieces counter will go negative (flag to fix).
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Purchase Rate with info */}
             <div>
               <label className="text-sm font-medium mb-1 block">

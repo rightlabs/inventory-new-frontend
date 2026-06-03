@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import toast from "react-hot-toast";
+import { downloadLedgerStatement } from "@/api/transaction";
 
 export interface TransactionData {
   _id: string;
@@ -31,9 +35,48 @@ interface LedgerModalProps {
   onClose: () => void;
   open: boolean;
   onDateSelect?: (date: Date) => void;
+  entityType?: "customer" | "vendor";
+  entityId?: string | null;
+  entityName?: string;
 }
 
-export function LedgerModal({ transactions, onClose, open }: LedgerModalProps) {
+export function LedgerModal({
+  transactions,
+  onClose,
+  open,
+  entityType,
+  entityId,
+  entityName,
+}: LedgerModalProps) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!entityType || !entityId) return;
+    try {
+      setDownloading(true);
+      const response = await downloadLedgerStatement(entityType, entityId);
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileName = `Ledger-${(entityName || entityId).replace(
+        /[^a-z0-9]/gi,
+        "_"
+      )}.pdf`;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Ledger downloaded");
+    } catch (error) {
+      console.error("Error downloading ledger:", error);
+      toast.error("Failed to download ledger");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString();
   };
@@ -42,18 +85,31 @@ export function LedgerModal({ transactions, onClose, open }: LedgerModalProps) {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Transaction History</DialogTitle>
+          <div className="flex items-center justify-between gap-4 pr-6">
+            <DialogTitle>Transaction History</DialogTitle>
+            {entityType && entityId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                disabled={downloading}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {downloading ? "Preparing..." : "Download Ledger"}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Document</TableHead>

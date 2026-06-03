@@ -305,6 +305,19 @@ export default function SalesForm({
       return;
     }
 
+    // Pieces are mandatory on pipe/sheet sales so the physical (countable) stock
+    // stays accurate — the client sells whole pieces only. Weight-sold fittings/
+    // polish keep it optional (deducted only when entered).
+    const missingPieces = selectedItems.filter(
+      (item) =>
+        (item.type === "pipe" || item.type === "sheet") &&
+        !(Number(item.pieces) > 0)
+    );
+    if (missingPieces.length > 0) {
+      toast.error("Please enter the number of pieces for each pipe / sheet item.");
+      return;
+    }
+
     const calculations = calculateTotals();
 
     // Validate split payments: total paid must not exceed grand total.

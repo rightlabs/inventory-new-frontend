@@ -23,6 +23,7 @@ import { Customer, CustomerDetail } from "@/types/type";
 import CustomerForm from "@/components/Forms/CustomerForm";
 import AdvancePaymentModal from "@/components/Forms/AdvancePaymentModal";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
+import DataPagination from "@/components/DataPagination";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -42,6 +43,14 @@ export default function CustomersPage() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+  });
 
   // Record payment state
   const [advanceOpen, setAdvanceOpen] = useState(false);
@@ -51,13 +60,17 @@ export default function CustomersPage() {
     currentBalance: number;
   } | null>(null);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (page = 1, search = debouncedSearch) => {
     try {
       setIsLoading(true);
-      const customersResponse = await getCustomers();
+      const customersResponse = await getCustomers({ page, limit: 10, search });
 
       if (customersResponse?.data?.statusCode === 200) {
-        setCustomers(customersResponse.data.data);
+        const data = customersResponse.data.data;
+        setCustomers(data.customers || []);
+        setPagination(
+          data.pagination || { currentPage: 1, totalPages: 1, totalItems: 0 }
+        );
       }
     } catch (error) {
       toast.error("Failed to fetch customers");
@@ -99,9 +112,16 @@ export default function CustomersPage() {
     setAdvanceOpen(true);
   };
 
+  // Debounce the search box, then reload from page 1.
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchCustomers(1, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const StatusBadge = ({ status }: { status: Customer["status"] }) => {
     const styles = {
@@ -122,19 +142,8 @@ export default function CustomersPage() {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
-
-  const filteredCustomers = customers.filter((customer) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      customer.name?.toLowerCase().includes(q) ||
-      customer.id?.toLowerCase().includes(q) ||
-      customer.contactPerson?.toLowerCase().includes(q) ||
-      customer.phone?.toLowerCase().includes(q)
-    );
-  });
 
   return (
     <div className="space-y-8">
@@ -201,9 +210,10 @@ export default function CustomersPage() {
           {isLoading ? (
             <div className="text-center py-4">Loading customers...</div>
           ) : (
-            <div className="rounded-md border">
+            <>
+            <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full">
-                <thead>
+                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       ID
@@ -232,7 +242,17 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCustomers.map((customer) => (
+                  {customers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="p-4 text-center text-muted-foreground"
+                      >
+                        No customers found
+                      </td>
+                    </tr>
+                  ) : (
+                    customers.map((customer) => (
                     <tr
                       key={customer.id}
                       className="border-b transition-colors hover:bg-muted/50"
@@ -304,10 +324,24 @@ export default function CustomersPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-between items-center mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing page {pagination.currentPage} of{" "}
+                  {pagination.totalPages} ({pagination.totalItems} customers)
+                </p>
+                <DataPagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={(p) => fetchCustomers(p)}
+                />
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -333,7 +367,7 @@ export default function CustomersPage() {
               onSuccess={() => {
                 setEditOpen(false);
                 setEditCustomerData(null);
-                fetchCustomers();
+                fetchCustomers(pagination.currentPage);
               }}
               onCancel={() => {
                 setEditOpen(false);
@@ -367,7 +401,7 @@ export default function CustomersPage() {
               onSuccess={() => {
                 setAdvanceOpen(false);
                 setAdvanceCustomer(null);
-                fetchCustomers();
+                fetchCustomers(pagination.currentPage);
               }}
               onCancel={() => {
                 setAdvanceOpen(false);
@@ -383,6 +417,11 @@ export default function CustomersPage() {
           transactions={transactions}
           open={showLedger}
           onClose={() => setShowLedger(false)}
+          entityType="customer"
+          entityId={selectedCustomerId}
+          entityName={
+            customers.find((c) => c._id === selectedCustomerId)?.name
+          }
         />
       )}
     </div>

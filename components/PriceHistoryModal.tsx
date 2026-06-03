@@ -67,7 +67,7 @@ export default function PriceHistoryModal({
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   return (

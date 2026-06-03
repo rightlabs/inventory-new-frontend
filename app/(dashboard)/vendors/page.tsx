@@ -125,7 +125,7 @@ export default function VendorsPage() {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   const filteredVendors = vendors.filter((vendor) => {
@@ -208,9 +208,9 @@ export default function VendorsPage() {
               <p className="text-muted-foreground">No vendors found</p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full">
-                <thead>
+                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       ID
@@ -289,6 +289,9 @@ export default function VendorsPage() {
           open={showLedger}
           onClose={() => setShowLedger(false)}
           onDateSelect={handleDateSelect}
+          entityType="vendor"
+          entityId={selectedVendor}
+          entityName={vendors.find((v) => v._id === selectedVendor)?.name}
         />
       )}
     </div>

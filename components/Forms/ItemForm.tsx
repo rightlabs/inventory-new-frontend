@@ -44,6 +44,7 @@ interface ItemFormData {
   name: string;
   code: string;
   currentStock: number | string;
+  pieces: number | string;
   minimumStock: number | string;
   purchaseRate: number | string;
   sellingRate: number | string;
@@ -74,6 +75,7 @@ export default function ItemForm({
     name: initialData?.name || "",
     code: initialData?.code || "",
     currentStock: initialData?.currentStock ?? "",
+    pieces: (initialData as any)?.pieces ?? "",
     minimumStock: initialData?.minimumStock ?? "",
     purchaseRate: initialData?.purchaseRate ?? "",
     sellingRate: initialData?.sellingRate ?? "",
@@ -338,7 +340,9 @@ export default function ItemForm({
         {renderTypeSpecificFields()}
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Current Stock</label>
+          <label className="text-sm font-medium">
+            Current Stock{formData.unitType === "weight" ? " (kg)" : ""}
+          </label>
           <Input
             type="number"
             value={formData.currentStock}
@@ -348,6 +352,22 @@ export default function ItemForm({
             placeholder="Enter stock"
           />
         </div>
+        {/* Current Pieces — for weight-sold items (pipe/sheet + kg-sold
+            fittings/polish) the physical piece count is a separate counter.
+            Lets the client set the exact count once to correct historical drift. */}
+        {formData.unitType === "weight" && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Current Pieces</label>
+            <Input
+              type="number"
+              value={formData.pieces}
+              onChange={(e) =>
+                setFormData({ ...formData, pieces: e.target.value })
+              }
+              placeholder="Enter pieces"
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <label className="text-sm font-medium">Minimum Stock</label>
           <Input

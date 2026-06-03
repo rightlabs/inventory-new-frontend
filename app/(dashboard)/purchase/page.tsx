@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import PurchaseModal from "@/components/Forms/PurchaseForm";
 import { format } from "date-fns";
 import PaymentModal from "@/components/Forms/PaymentModal";
+import DataPagination from "@/components/DataPagination";
 
 interface Vendor {
   id: string;
@@ -142,7 +143,7 @@ export default function PurchasePage() {
       currency: "INR",
       maximumFractionDigits: 2,
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   const filteredPurchases = purchases.filter((purchase) => {
@@ -222,9 +223,9 @@ export default function PurchasePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
             <table className="w-full">
-              <thead>
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                 <tr className="border-b bg-muted/50">
                   <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                     Date
@@ -318,24 +319,11 @@ export default function PurchasePage() {
               <p className="text-sm text-muted-foreground">
                 Showing page {pagination.currentPage} of {pagination.totalPages}
               </p>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.currentPage === 1}
-                  onClick={() => fetchPurchases(pagination.currentPage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  onClick={() => fetchPurchases(pagination.currentPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+              <DataPagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={(p) => fetchPurchases(p)}
+              />
             </div>
           )}
         </CardContent>

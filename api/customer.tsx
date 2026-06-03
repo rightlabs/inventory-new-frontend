@@ -1,9 +1,19 @@
 // api/customer.ts
 import API_INSTANCE from "./index";
 
-export const getCustomers = async () => {
+export const getCustomers = async (filters?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
   try {
-    const res = await API_INSTANCE.get("/customer");
+    // No filters → full list (used by dropdowns). With page/limit → paginated.
+    const queryParams = new URLSearchParams();
+    if (filters?.page) queryParams.append("page", String(filters.page));
+    if (filters?.limit) queryParams.append("limit", String(filters.limit));
+    if (filters?.search) queryParams.append("search", filters.search);
+    const qs = queryParams.toString();
+    const res = await API_INSTANCE.get(`/customer${qs ? `?${qs}` : ""}`);
     return res;
   } catch (error) {
     console.error("Error fetching customers:", error);

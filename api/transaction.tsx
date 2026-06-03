@@ -1,5 +1,14 @@
 import API_INSTANCE from "./index";
 
+export const downloadLedgerStatement = async (
+  entityType: "customer" | "vendor",
+  entityId: string
+) => {
+  return API_INSTANCE.get(`/ledger/${entityType}/${entityId}/statement`, {
+    responseType: "blob",
+  });
+};
+
 export const getVendorLedger = async (
   vendorId: string,
   filters?: {

@@ -41,6 +41,9 @@ export interface BaseItem {
   lastPurchaseDate?: string;
   unitType: UnitType;
   status: ItemStatus;
+  // Secondary physical piece counter (base schema has it for every item type).
+  // Meaningful for weight-sold items that also track whole pieces.
+  pieces?: number;
 }
 
 export interface PipeSheetItem extends BaseItem {

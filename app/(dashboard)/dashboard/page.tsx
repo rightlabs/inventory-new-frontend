@@ -84,7 +84,7 @@ export default function DashboardPage() {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   // Show loading while checking role or loading data

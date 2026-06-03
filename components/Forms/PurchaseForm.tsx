@@ -992,7 +992,7 @@ const PurchaseModal = ({
 
               <div>
                 <label className="text-sm font-medium mb-1 block">
-                  Freight
+                  Freight / Logistics
                 </label>
                 <Input
                   type="text"

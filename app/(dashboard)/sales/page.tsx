@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import DataPagination from "@/components/DataPagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -246,9 +247,9 @@ export default function SalesPage() {
           {isLoading ? (
             <div className="text-center py-4">Loading sales...</div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full">
-                <thead>
+                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Date
@@ -368,24 +369,11 @@ export default function SalesPage() {
               <p className="text-sm text-muted-foreground">
                 Showing page {pagination.currentPage} of {pagination.totalPages}
               </p>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.currentPage === 1}
-                  onClick={() => fetchSales(pagination.currentPage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  onClick={() => fetchSales(pagination.currentPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+              <DataPagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={(p) => fetchSales(p)}
+              />
             </div>
           )}
         </CardContent>

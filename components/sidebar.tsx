@@ -82,7 +82,7 @@ export function Sidebar() {
             key={route.href}
             href={route.href}
             className={cn(
-              "flex items-center gap-x-2  text-[#64748B] text-base font-medium px-3 py-3 rounded-lg hover:bg-[#F1F5F9] transition-colors",
+              "flex items-center gap-x-2  text-[#64748B] text-base font-medium px-3 py-3 rounded-lg hover:bg-[#F1F5F9] transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
               pathname === route.href && "bg-[#F1F5F9] text-[#7C3AED]"
             )}
           >
