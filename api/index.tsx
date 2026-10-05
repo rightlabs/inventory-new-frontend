@@ -5,7 +5,8 @@ import Cookies from 'js-cookie';
 
 export const prefix = '/api/v1';
 // export const baseurl = 'http://localhost:9010';
-export const baseurl = 'https://inventory-backend.rightlabs.live';
+export const baseurl =
+  process.env.NEXT_PUBLIC_API_URL || 'https://inventory-backend.rightlabs.live';
 export const url = baseurl + prefix;
 
 // Helper function to get token from cookies
