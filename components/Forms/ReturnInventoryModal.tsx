@@ -21,6 +21,7 @@ import { Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { InventoryItem } from "@/types/type";
 import { addInventoryReturn } from "@/api/items";
+import { formatQty, round2 } from "@/utils/format";
 
 interface ReturnLine {
   itemId: string;
@@ -82,8 +83,8 @@ export default function ReturnInventoryModal({
       if (!l.itemId) continue;
       const item = itemById(l.itemId);
       if (!item) continue;
-      const qty = parseFloat(l.qty);
-      const rate = parseFloat(l.rate);
+      const qty = round2(parseFloat(l.qty));
+      const rate = round2(parseFloat(l.rate));
       const pieces = parseFloat(l.pieces);
       const isWeight = item.unitType === "weight";
 
@@ -173,8 +174,8 @@ export default function ReturnInventoryModal({
                     <SelectContent>
                       {items.map((it) => (
                         <SelectItem key={it._id} value={it._id}>
-                          {it.name} ({it.currentStock}{" "}
-                          {it.unitType === "weight" ? "kg" : "pcs"})
+                          {it.name} (
+                          {formatQty(it.currentStock, it.unitType === "weight" ? "kg" : "pcs")})
                         </SelectItem>
                       ))}
                     </SelectContent>

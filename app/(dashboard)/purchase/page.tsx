@@ -13,6 +13,7 @@ import PurchaseModal from "@/components/Forms/PurchaseForm";
 import { format } from "date-fns";
 import PaymentModal from "@/components/Forms/PaymentModal";
 import DataPagination from "@/components/DataPagination";
+import { formatINR } from "@/utils/format";
 
 interface Vendor {
   id: string;
@@ -135,15 +136,6 @@ export default function PurchasePage() {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   const filteredPurchases = purchases.filter((purchase) => {
@@ -285,10 +277,10 @@ export default function PurchasePage() {
                         {purchase.vendor.name}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(purchase.grandTotal)}
+                        {formatINR(purchase.grandTotal)}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(purchase.balanceAmount)}
+                        {formatINR(purchase.balanceAmount)}
                       </td>
                       <td className="p-4 align-middle">
                         <PaymentBadge status={purchase.paymentStatus} />

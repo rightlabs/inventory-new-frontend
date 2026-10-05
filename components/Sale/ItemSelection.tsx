@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { InventoryItem } from "@/types/type";
 import { Search, Package, AlertCircle } from "lucide-react";
+import { formatINR, formatQty, round2 } from "@/utils/format";
 
 interface ItemSelectionProps {
   item: any;
@@ -175,9 +176,9 @@ export default function ItemSelection({
       gauge: product.gauge || "",
       subCategory: product.subCategory || "",
       specification: product.specification || "",
-      rate: product.purchaseRate || 0,
+      rate: round2(product.purchaseRate || 0),
       margin: 0,
-      sellingPrice: product.purchaseRate || 0,
+      sellingPrice: round2(product.purchaseRate || 0),
       quantity: initialQuantity,
       weight: initialWeight,
       pieces: initialQuantity,
@@ -211,20 +212,11 @@ export default function ItemSelection({
     });
   };
 
-  // Calculate selling price and amount
+  // Calculate selling price and amount (2 dp — never store float noise)
   const calculatePrices = (rate: number, margin: number, qty: number) => {
-    const sellingPrice = rate + margin;
-    const amount = qty * sellingPrice;
+    const sellingPrice = round2(rate + margin);
+    const amount = round2(qty * sellingPrice);
     return { sellingPrice, amount };
-  };
-
-  // Format currency for display
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(amount);
   };
 
   // Get item display info
@@ -234,7 +226,7 @@ export default function ItemSelection({
     const unit = product.unitType === "weight" ? "kg" : "pcs";
     return {
       name: parts.join(" "),
-      stock: `${stock} ${unit}`,
+      stock: formatQty(stock, unit),
       purchaseRate: product.purchaseRate || 0,
       avgRate: product.averageRate || product.purchaseRate || 0,
     };
@@ -316,8 +308,8 @@ export default function ItemSelection({
                               <span className={isLowStock ? "text-red-500 font-medium" : ""}>
                                 Stock: {info.stock}
                               </span>
-                              <span>Rate: {formatCurrency(info.purchaseRate)}</span>
-                              <span>Avg: {formatCurrency(info.avgRate)}</span>
+                              <span>Rate: {formatINR(info.purchaseRate)}</span>
+                              <span>Avg: {formatINR(info.avgRate)}</span>
                             </div>
                           </div>
                           {isLowStock && (
@@ -386,7 +378,7 @@ export default function ItemSelection({
             <div>
               <span className="text-xs text-muted-foreground">In Stock</span>
               <p className={`font-medium text-sm ${selectedProduct.currentStock < selectedProduct.minimumStock ? "text-red-500" : "text-green-600"}`}>
-                {selectedProduct.currentStock} {selectedProduct.unitType === "weight" ? "kg" : "pcs"}
+                {formatQty(selectedProduct.currentStock, selectedProduct.unitType === "weight" ? "kg" : "pcs")}
               </p>
             </div>
           </div>
@@ -491,7 +483,7 @@ export default function ItemSelection({
               <label className="text-sm font-medium mb-1 block">
                 Purchase Rate
                 <span className="text-xs text-muted-foreground ml-1">
-                  (Avg: {formatCurrency(selectedProduct.averageRate || selectedProduct.purchaseRate || 0)})
+                  (Avg: {formatINR(selectedProduct.averageRate || selectedProduct.purchaseRate || 0)})
                 </span>
               </label>
               <Input
@@ -536,7 +528,7 @@ export default function ItemSelection({
                       ...item,
                       margin: "",
                       sellingPrice: parseFloat(String(item.rate)) || 0,
-                      amount: qty * (parseFloat(String(item.rate)) || 0),
+                      amount: round2(qty * (parseFloat(String(item.rate)) || 0)),
                     });
                     return;
                   }
@@ -581,8 +573,8 @@ export default function ItemSelection({
                   const sellingPrice = parseFloat(value);
                   if (isNaN(sellingPrice)) return;
 
-                  const margin = Number((sellingPrice - rate).toFixed(2));
-                  const amount = qty * sellingPrice;
+                  const margin = round2(sellingPrice - rate);
+                  const amount = round2(qty * sellingPrice);
 
                   const preserveAsString = value.endsWith('.') || (value.includes('.') && value.endsWith('0'));
                   const priceToStore = preserveAsString ? value : sellingPrice;
@@ -599,7 +591,7 @@ export default function ItemSelection({
           <div className="flex justify-end">
             <div className="text-right">
               <span className="text-sm text-muted-foreground">Amount: </span>
-              <span className="text-lg font-bold">{formatCurrency(item.amount || 0)}</span>
+              <span className="text-lg font-bold">{formatINR(item.amount || 0)}</span>
             </div>
           </div>
         </>

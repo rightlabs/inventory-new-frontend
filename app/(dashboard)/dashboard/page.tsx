@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatINR, formatQty } from "@/utils/format";
 
 export interface DashboardData {
   metrics: DashboardMetrics;
@@ -78,14 +79,6 @@ export default function DashboardPage() {
 
     fetchData();
   }, []);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
-  };
 
   // Show loading while checking role or loading data
   if (!dashboardData || !inventoryData || user?.role === "sales")
@@ -211,7 +204,7 @@ export default function DashboardPage() {
                   </Tooltip>
                 </p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(summaryStats.totalReceivables)}
+                  {formatINR(summaryStats.totalReceivables)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   सभी ग्राहकों का कुल बकाया
@@ -235,7 +228,7 @@ export default function DashboardPage() {
                   </Tooltip>
                 </p>
                 <p className="text-2xl font-bold text-red-600">
-                  {formatCurrency(summaryStats.totalPayables)}
+                  {formatINR(summaryStats.totalPayables)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   जो खरीदारी का पैसा अभी बाकी है
@@ -259,7 +252,7 @@ export default function DashboardPage() {
                   </Tooltip>
                 </p>
                 <p className="text-2xl font-bold text-amber-600">
-                  {formatCurrency(dashboardData.metrics.totalPurchase.total)}
+                  {formatINR(dashboardData.metrics.totalPurchase.total)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   कुल खरीदारी की रकम
@@ -283,7 +276,7 @@ export default function DashboardPage() {
                   </Tooltip>
                 </p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(summaryStats.averageOrderValue)}
+                  {formatINR(summaryStats.averageOrderValue)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   हर बिल का औसत
@@ -329,12 +322,12 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.totalQuantity.toFixed(2)} units sold
+                          {formatQty(item.totalQuantity)} units sold
                         </p>
                       </div>
                     </div>
                     <p className="font-semibold text-sm">
-                      {formatCurrency(item.totalValue)}
+                      {formatINR(item.totalValue)}
                     </p>
                   </div>
                 ))}

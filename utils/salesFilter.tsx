@@ -1,5 +1,6 @@
 // utils/saleFilters.ts
 import { Sale } from "@/types/type";
+import { formatINR } from "@/utils/format";
 
 export interface SaleFilters {
   page?: number;
@@ -39,10 +40,4 @@ export const formatSaleDate = (date: string) => {
   });
 };
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-  }).format(amount);
-};
+export const formatCurrency = (amount: number) => formatINR(amount);

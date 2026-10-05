@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import toast from "react-hot-toast";
 import { cancelSale, returnSaleItems } from "@/api/sale";
 import { Sale, SaleItem } from "@/types/type";
+import { formatINR, formatQty, round2 } from "@/utils/format";
 
 interface ReturnItemsModalProps {
   open: boolean;
@@ -51,15 +52,7 @@ export default function ReturnItemsModal({
       .reduce((sum, ri) => sum + ri.quantityReturned, 0);
     const originalQty =
       saleItem.weight || saleItem.quantity || saleItem.pieces || 0;
-    return originalQty - alreadyReturned;
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(amount);
+    return round2(originalQty - alreadyReturned);
   };
 
   const handleCheckItem = (index: number, checked: boolean) => {
@@ -88,7 +81,8 @@ export default function ReturnItemsModal({
       const originalQty =
         saleItem.weight || saleItem.quantity || saleItem.pieces || 0;
       const unitPrice = originalQty > 0 ? saleItem.amount / originalQty : 0;
-      total += unitPrice * (Number(qty) || 0);
+      // Rounded per line, like the backend, so the preview matches the credit.
+      total = round2(total + round2(unitPrice * round2(qty)));
     }
     return total;
   };
@@ -98,7 +92,7 @@ export default function ReturnItemsModal({
       .filter(([_, checked]) => checked)
       .map(([indexStr]) => {
         const index = Number(indexStr);
-        const qty = Number(returnQuantities[index]) || 0;
+        const qty = round2(returnQuantities[index]);
         return { itemIndex: index, quantity: qty };
       })
       .filter((item) => item.quantity > 0);
@@ -114,9 +108,10 @@ export default function ReturnItemsModal({
         item.itemIndex,
         sale.items[item.itemIndex]
       );
-      if (item.quantity > available) {
+      // Tolerance absorbs float noise from originalQty - alreadyReturned.
+      if (item.quantity - available > 1e-6) {
         toast.error(
-          `Return quantity for ${sale.items[item.itemIndex].name} exceeds available (${available})`
+          `Return quantity for ${sale.items[item.itemIndex].name} exceeds available (${formatQty(available)})`
         );
         return;
       }
@@ -161,7 +156,7 @@ export default function ReturnItemsModal({
   };
 
   const hasReturnableItems = sale.items.some(
-    (item, index) => getAvailableQuantity(index, item) > 0
+    (item, index) => getAvailableQuantity(index, item) > 1e-6
   );
 
   return (
@@ -182,7 +177,7 @@ export default function ReturnItemsModal({
           <div>
             <span className="text-muted-foreground">Total:</span>{" "}
             <span className="font-medium">
-              {formatCurrency(sale.originalGrandTotal || sale.grandTotal)}
+              {formatINR(sale.originalGrandTotal || sale.grandTotal)}
             </span>
           </div>
         </div>
@@ -211,7 +206,7 @@ export default function ReturnItemsModal({
                   const originalQty =
                     item.weight || item.quantity || item.pieces || 0;
                   const available = getAvailableQuantity(index, item);
-                  if (available <= 0) return null;
+                  if (available <= 1e-6) return null;
 
                   return (
                     <tr key={index} className="border-b">
@@ -224,8 +219,8 @@ export default function ReturnItemsModal({
                         />
                       </td>
                       <td className="p-3 text-sm">{item.name}</td>
-                      <td className="p-3 text-sm text-right">{originalQty}</td>
-                      <td className="p-3 text-sm text-right">{available}</td>
+                      <td className="p-3 text-sm text-right">{formatQty(originalQty)}</td>
+                      <td className="p-3 text-sm text-right">{formatQty(available)}</td>
                       <td className="p-3">
                         {selectedItems[index] && (
                           <Input
@@ -273,7 +268,7 @@ export default function ReturnItemsModal({
             <div className="flex justify-between font-medium">
               <span>Return Amount</span>
               <span className="text-red-600">
-                {formatCurrency(calculateReturnTotal())}
+                {formatINR(calculateReturnTotal())}
               </span>
             </div>
           </div>

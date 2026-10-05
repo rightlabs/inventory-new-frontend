@@ -38,6 +38,7 @@ import {
 import toast from "react-hot-toast";
 import { getMisSummary, getMisSalesExport, MisSummary } from "@/api/mis";
 import { getSales } from "@/api/sale";
+import { formatINR } from "@/utils/format";
 
 const PAGE_SIZE = 10;
 
@@ -48,14 +49,6 @@ const toDateInput = (d: Date) => {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
 
 const formatNumber = (n: number) =>
   new Intl.NumberFormat("en-IN").format(n || 0);
@@ -287,42 +280,42 @@ export default function AnalyticsPage() {
     return [
       {
         label: "Total Revenue",
-        value: formatCurrency(kpis.totalRevenue),
+        value: formatINR(kpis.totalRevenue),
         icon: IndianRupee,
         tone: "text-primary",
         sub: `${formatNumber(kpis.salesCount)} sale(s)`,
       },
       {
         label: "Gross Profit",
-        value: formatCurrency(kpis.grossProfit),
+        value: formatINR(kpis.grossProfit),
         icon: TrendingUp,
         tone: kpis.grossProfit >= 0 ? "text-emerald-600" : "text-red-600",
         sub: `Margin ${kpis.grossMargin.toFixed(2)}%`,
       },
       {
         label: "COGS",
-        value: formatCurrency(kpis.totalCogs),
+        value: formatINR(kpis.totalCogs),
         icon: Package,
         tone: "text-slate-600",
         sub: "Cost of goods sold",
       },
       {
         label: "Purchases",
-        value: formatCurrency(kpis.totalPurchases),
+        value: formatINR(kpis.totalPurchases),
         icon: ShoppingCart,
         tone: "text-slate-600",
         sub: `${formatNumber(kpis.purchaseCount)} order(s)`,
       },
       {
         label: "Avg. Sale Value",
-        value: formatCurrency(kpis.avgOrderValue),
+        value: formatINR(kpis.avgOrderValue),
         icon: IndianRupee,
         tone: "text-slate-600",
         sub: "Per sale order",
       },
       {
         label: "Discounts Given",
-        value: formatCurrency(kpis.totalDiscount),
+        value: formatINR(kpis.totalDiscount),
         icon: Percent,
         tone: "text-slate-600",
         sub: "Total in range",
@@ -441,17 +434,17 @@ export default function AnalyticsPage() {
                       <td className="p-3 capitalize">{c.category}</td>
                       <td className="p-3 text-right">{formatNumber(c.count)}</td>
                       <td className="p-3 text-right">
-                        {formatCurrency(c.revenue)}
+                        {formatINR(c.revenue)}
                       </td>
                       <td className="p-3 text-right">
-                        {formatCurrency(c.cogs)}
+                        {formatINR(c.cogs)}
                       </td>
                       <td
                         className={`p-3 text-right ${
                           c.profit >= 0 ? "text-emerald-600" : "text-red-600"
                         }`}
                       >
-                        {formatCurrency(c.profit)}
+                        {formatINR(c.profit)}
                       </td>
                       <td
                         className={`p-3 text-right ${
@@ -490,7 +483,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: number) => formatINR(value)}
                   />
                   <Legend />
                   <Line
@@ -563,10 +556,10 @@ export default function AnalyticsPage() {
                       </td>
                       <td className="p-3">{s.customer?.name || "—"}</td>
                       <td className="p-3 text-right">
-                        {formatCurrency(s.grandTotal)}
+                        {formatINR(s.grandTotal)}
                       </td>
                       <td className="p-3 text-right">
-                        {formatCurrency(s.balanceAmount)}
+                        {formatINR(s.balanceAmount)}
                       </td>
                       <td className="p-3">
                         <Badge value={s.status} map={STATUS_BADGE} />

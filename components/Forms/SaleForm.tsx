@@ -25,6 +25,7 @@ import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
 import ItemSelection from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
+import { formatINR, formatQty, round2 } from "@/utils/format";
 
 interface QuantityError {
   hasError: boolean;
@@ -222,18 +223,20 @@ export default function SalesForm({
   };
 
   const checkStockAvailability = (product: any, item: Partial<SaleItem>) => {
+    // Small tolerance absorbs float noise in stored stock (e.g. 86.97999999999999)
+    // so selling exactly the available quantity isn't wrongly blocked.
     if (product.unitType === "weight") {
-      if ((item.weight || 0) > product.currentStock) {
+      if ((item.weight || 0) - product.currentStock > 1e-6) {
         return {
           valid: false,
-          message: `Only ${product.currentStock}kg available in stock`,
+          message: `Only ${formatQty(product.currentStock, "kg")} available in stock`,
         };
       }
     } else {
-      if ((item.quantity || 0) > product.currentStock) {
+      if ((item.quantity || 0) - product.currentStock > 1e-6) {
         return {
           valid: false,
-          message: `Only ${product.currentStock} pieces available in stock`,
+          message: `Only ${formatQty(product.currentStock)} pieces available in stock`,
         };
       }
     }
@@ -241,23 +244,24 @@ export default function SalesForm({
   };
 
   const calculateTotals = () => {
-    const subtotal = selectedItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const subtotal = round2(
+      selectedItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+    );
     const discountValue = Number(formData.discount) || 0;
     const rawDiscountAmount =
       formData.discountType === "amount"
         ? discountValue
         : (subtotal * discountValue) / 100;
     // Cap discount at subtotal so grandTotal can't go negative.
-    const discountAmount = Math.min(Math.max(0, rawDiscountAmount), subtotal);
-    const additionalCharges = Number(formData.additionalCharges) || 0;
-    const grandTotal = Number(
-      (subtotal - discountAmount + additionalCharges).toFixed(2)
+    const discountAmount = round2(
+      Math.min(Math.max(0, rawDiscountAmount), subtotal)
     );
-    const amountPaidValue = paymentRows.reduce(
-      (sum, p) => sum + (Number(p.amount) || 0),
-      0
+    const additionalCharges = round2(formData.additionalCharges);
+    const grandTotal = round2(subtotal - discountAmount + additionalCharges);
+    const amountPaidValue = round2(
+      paymentRows.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
     );
-    const balance = Number((grandTotal - amountPaidValue).toFixed(2));
+    const balance = round2(grandTotal - amountPaidValue);
 
     return {
       subtotal,
@@ -323,7 +327,7 @@ export default function SalesForm({
     // Validate split payments: total paid must not exceed grand total.
     if (calculations.amountPaid > calculations.grandTotal + 0.001) {
       toast.error(
-        `Total payments (₹${calculations.amountPaid.toFixed(2)}) exceed grand total (₹${calculations.grandTotal.toFixed(2)})`
+        `Total payments (${formatINR(calculations.amountPaid)}) exceed grand total (${formatINR(calculations.grandTotal)})`
       );
       return;
     }
@@ -355,7 +359,7 @@ export default function SalesForm({
 
       const validPayments = paymentRows
         .map((p) => ({
-          amount: Number(p.amount) || 0,
+          amount: round2(p.amount),
           mode: p.mode,
           reference: p.reference || "",
           date: new Date(),
@@ -373,12 +377,12 @@ export default function SalesForm({
           name: item.name,
           type: item.type,
           quantity: item.quantity,
-          weight: item.weight,
+          weight: item.weight === undefined ? undefined : round2(item.weight),
           pieces: item.pieces || item.quantity,
-          rate: Number(item.rate) || 0,
-          margin: Number(item.margin) || 0,
-          sellingPrice: Number(item.sellingPrice) || 0,
-          amount: item.amount,
+          rate: round2(item.rate),
+          margin: round2(item.margin),
+          sellingPrice: round2(item.sellingPrice),
+          amount: round2(item.amount),
         })),
         discount: Number(formData.discount) || 0,
         discountType: formData.discountType,
@@ -419,14 +423,6 @@ export default function SalesForm({
     setSelectedCustomer(null);
     setQuantityErrors({});
     setShowPreview(false);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(amount);
   };
 
   return (
@@ -482,13 +478,13 @@ export default function SalesForm({
                       <td className="p-3 text-sm">{i + 1}</td>
                       <td className="p-3 text-sm">{item.name}</td>
                       <td className="p-3 text-sm text-right">
-                        {item.weight || item.quantity || 0}
+                        {formatQty(item.weight || item.quantity || 0)}
                       </td>
                       <td className="p-3 text-sm text-right">
-                        {formatCurrency(item.sellingPrice)}
+                        {formatINR(item.sellingPrice)}
                       </td>
                       <td className="p-3 text-sm text-right">
-                        {formatCurrency(item.amount)}
+                        {formatINR(item.amount)}
                       </td>
                     </tr>
                   ))}
@@ -500,7 +496,7 @@ export default function SalesForm({
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Subtotal</span>
-                <span>{formatCurrency(calculateTotals().subtotal)}</span>
+                <span>{formatINR(calculateTotals().subtotal)}</span>
               </div>
               {calculateTotals().discountAmount > 0 && (
                 <div className="flex justify-between text-red-600">
@@ -510,18 +506,18 @@ export default function SalesForm({
                       ? ` (${formData.discount}%)`
                       : ""}
                   </span>
-                  <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
+                  <span>-{formatINR(calculateTotals().discountAmount)}</span>
                 </div>
               )}
               {Number(formData.additionalCharges) > 0 && (
                 <div className="flex justify-between text-blue-600">
                   <span className="text-sm">{formData.additionalChargesLabel || "Additional Charges"}</span>
-                  <span>+{formatCurrency(calculateTotals().additionalCharges)}</span>
+                  <span>+{formatINR(calculateTotals().additionalCharges)}</span>
                 </div>
               )}
               <div className="flex justify-between font-medium pt-2 border-t">
                 <span>Grand Total</span>
-                <span className="text-lg">{formatCurrency(calculateTotals().grandTotal)}</span>
+                <span className="text-lg">{formatINR(calculateTotals().grandTotal)}</span>
               </div>
               {paymentRows.filter((p) => Number(p.amount) > 0).length > 0 && (
                 <div className="pt-2 border-t space-y-1">
@@ -533,16 +529,16 @@ export default function SalesForm({
                           {p.mode}
                           {p.reference ? ` (${p.reference})` : ""}
                         </span>
-                        <span>{formatCurrency(Number(p.amount))}</span>
+                        <span>{formatINR(Number(p.amount))}</span>
                       </div>
                     ))}
                   <div className="flex justify-between text-green-700 font-medium">
                     <span>Total Paid</span>
-                    <span>{formatCurrency(calculateTotals().amountPaid)}</span>
+                    <span>{formatINR(calculateTotals().amountPaid)}</span>
                   </div>
                   <div className="flex justify-between text-red-600 font-medium">
                     <span>Balance</span>
-                    <span>{formatCurrency(calculateTotals().balance)}</span>
+                    <span>{formatINR(calculateTotals().balance)}</span>
                   </div>
                 </div>
               )}
@@ -606,10 +602,10 @@ export default function SalesForm({
                 {selectedCustomer && (
                   <div className="text-sm bg-muted/50 p-2 rounded">
                     <p>
-                      Credit Limit: {formatCurrency(selectedCustomer?.creditLimit || 0)}
+                      Credit Limit: {formatINR(selectedCustomer?.creditLimit || 0)}
                     </p>
                     <p>
-                      Current Balance: {formatCurrency(selectedCustomer?.currentBalance || 0)}
+                      Current Balance: {formatINR(selectedCustomer?.currentBalance || 0)}
                     </p>
                     <Button
                       variant="link"
@@ -878,7 +874,7 @@ export default function SalesForm({
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm">Subtotal</span>
-                    <span>{formatCurrency(calculateTotals().subtotal)}</span>
+                    <span>{formatINR(calculateTotals().subtotal)}</span>
                   </div>
                   {calculateTotals().discountAmount > 0 && (
                     <div className="flex justify-between text-red-600">
@@ -888,24 +884,24 @@ export default function SalesForm({
                           ? ` (${formData.discount}%)`
                           : ""}
                       </span>
-                      <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
+                      <span>-{formatINR(calculateTotals().discountAmount)}</span>
                     </div>
                   )}
                   {Number(formData.additionalCharges) > 0 && (
                     <div className="flex justify-between text-blue-600">
                       <span className="text-sm">{formData.additionalChargesLabel || "Additional Charges"}</span>
-                      <span>+{formatCurrency(calculateTotals().additionalCharges)}</span>
+                      <span>+{formatINR(calculateTotals().additionalCharges)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-medium pt-2 border-t">
                     <span>Grand Total</span>
-                    <span className="text-lg">{formatCurrency(calculateTotals().grandTotal)}</span>
+                    <span className="text-lg">{formatINR(calculateTotals().grandTotal)}</span>
                   </div>
                   {calculateTotals().amountPaid > 0 && (
                     <>
                       <div className="flex justify-between text-green-600">
                         <span>Total Paid</span>
-                        <span>{formatCurrency(calculateTotals().amountPaid)}</span>
+                        <span>{formatINR(calculateTotals().amountPaid)}</span>
                       </div>
                       <div
                         className={`flex justify-between font-medium ${
@@ -913,11 +909,11 @@ export default function SalesForm({
                         }`}
                       >
                         <span>Balance</span>
-                        <span>{formatCurrency(calculateTotals().balance)}</span>
+                        <span>{formatINR(calculateTotals().balance)}</span>
                       </div>
                       {calculateTotals().balance < 0 && (
                         <p className="text-xs text-orange-600">
-                          Payments exceed grand total by {formatCurrency(Math.abs(calculateTotals().balance))}.
+                          Payments exceed grand total by {formatINR(Math.abs(calculateTotals().balance))}.
                         </p>
                       )}
                     </>
@@ -929,7 +925,7 @@ export default function SalesForm({
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Available Credit:{" "}
-                      {formatCurrency(
+                      {formatINR(
                         selectedCustomer.creditLimit - selectedCustomer.currentBalance
                       )}
                     </AlertDescription>

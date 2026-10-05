@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import toast from "react-hot-toast";
 import { recordCustomerPayment } from "@/api/customer";
+import { formatINR } from "@/utils/format";
 
 interface AdvancePaymentModalProps {
   customerId: string;
@@ -32,13 +33,6 @@ export default function AdvancePaymentModal({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +80,7 @@ export default function AdvancePaymentModal({
             <>
               {" "}Current balance:{" "}
               <span className={`font-medium ${currentBalance > 0 ? "text-red-600" : "text-green-600"}`}>
-                {formatCurrency(currentBalance)}
+                {formatINR(currentBalance)}
               </span>
             </>
           )}

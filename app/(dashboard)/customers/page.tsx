@@ -24,6 +24,7 @@ import CustomerForm from "@/components/Forms/CustomerForm";
 import AdvancePaymentModal from "@/components/Forms/AdvancePaymentModal";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import DataPagination from "@/components/DataPagination";
+import { formatINR } from "@/utils/format";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -136,13 +137,6 @@ export default function CustomersPage() {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   return (
@@ -278,13 +272,13 @@ export default function CustomersPage() {
                         </div>
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(customer.creditLimit)}
+                        {formatINR(customer.creditLimit)}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(customer.currentBalance)}
+                        {formatINR(customer.currentBalance)}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(customer.totalSales)}
+                        {formatINR(customer.totalSales)}
                       </td>
                       <td className="p-4 align-middle">
                         <StatusBadge status={customer.status} />

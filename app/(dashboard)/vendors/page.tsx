@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { getVendorLedger } from "@/api/transaction";
 import { LedgerModal, TransactionData } from "@/components/Forms/LedgerModal";
+import { formatINR } from "@/utils/format";
 interface Vendor {
   _id: string;
   id: string;
@@ -119,13 +120,6 @@ export default function VendorsPage() {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
   };
 
   const filteredVendors = vendors.filter((vendor) => {
@@ -257,10 +251,10 @@ export default function VendorsPage() {
                       <td className="p-4 align-middle">{vendor.phone || "-"}</td>
                       <td className="p-4 align-middle">{vendor.gstin || "-"}</td>
                       <td className="p-4 align-middle text-right">
-                        {vendor.creditLimit ? formatCurrency(vendor.creditLimit) : "-"}
+                        {vendor.creditLimit ? formatINR(vendor.creditLimit) : "-"}
                       </td>
                       <td className="p-4 align-middle text-right">
-                        {formatCurrency(vendor?.currentBalance)}
+                        {formatINR(vendor?.currentBalance)}
                       </td>
                       <td className="p-4 align-middle">
                         <StatusBadge status={vendor.status} />

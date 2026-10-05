@@ -35,6 +35,7 @@ import { getVendorLedger } from "@/api/transaction";
 // import { format as dateFormat } from "date-fns";
 import DatePicker from "../ui/DatePicker";
 import SummaryPurchase from "../Purchase/SummaryPurchase";
+import { formatINR, formatQty, round2 } from "@/utils/format";
 
 interface Vendor {
   id: string;
@@ -258,18 +259,6 @@ const PurchaseModal = ({
     return parts.filter(Boolean).join("-");
   };
 
-  const formatCurrency = (amount: number) => {
-    // Convert to 2 decimal places first
-    const roundedAmount = Number(Number(amount).toFixed(2));
-
-    // Check if it's a whole number
-    const isWholeNumber = roundedAmount % 1 === 0;
-    // Format accordingly
-    return `₹${
-      isWholeNumber ? Math.round(roundedAmount) : roundedAmount?.toFixed(2)
-    }`;
-  };
-
   const formatSize = (size: string) => {
     return size?.replace(/'/g, "'").replace(/"/g, '"') || "";
   };
@@ -304,12 +293,13 @@ const PurchaseModal = ({
           const name = formatItemName(row, currentType);
           const grade = row["Grade"];
           const pieces = Number(row["Pieces"]) || undefined;
-          const weight = Number(row["Weight"]) || undefined;
-          const rate = Number(row["Rate"]) || 0;
+          // kg and rates are stored at 2 dp
+          const weight = round2(row["Weight"]) || undefined;
+          const rate = round2(row["Rate"]);
           const specification = row["Specification"] || "";
 
           // Calculate amount: use whichever unit has data
-          const amount = weight ? weight * rate : (pieces || 0) * rate;
+          const amount = round2(weight ? weight * rate : (pieces || 0) * rate);
 
           // For fitting items, store Type in a separate field
           const typeValue = itemType === "fitting" ? row["Type"] : undefined;
@@ -353,9 +343,8 @@ const PurchaseModal = ({
           };
         });
 
-        const totalAmount = processedItems.reduce(
-          (sum, item) => sum + item.amount,
-          0
+        const totalAmount = round2(
+          processedItems.reduce((sum, item) => sum + item.amount, 0)
         );
 
         setProcessedData({
@@ -396,13 +385,14 @@ const PurchaseModal = ({
   const calculateFinalAmounts = () => {
     if (!processedData) return null;
 
-    const discountAmount =
-      (processedData.totalAmount * Number(formData.discount)) / 100;
-    const afterDiscount = processedData.totalAmount - discountAmount;
-    const freightAmount = Number(formData.freight) || 0;
-    const tcsAmount = Number(formData.tcs) || 0;
-    const grandTotal = afterDiscount + freightAmount + tcsAmount;
-    const balance = grandTotal - Number(formData.amountPaid);
+    const discountAmount = round2(
+      (processedData.totalAmount * Number(formData.discount)) / 100
+    );
+    const afterDiscount = round2(processedData.totalAmount - discountAmount);
+    const freightAmount = round2(formData.freight);
+    const tcsAmount = round2(formData.tcs);
+    const grandTotal = round2(afterDiscount + freightAmount + tcsAmount);
+    const balance = round2(grandTotal - Number(formData.amountPaid));
 
     return {
       discountAmount,
@@ -514,7 +504,7 @@ const PurchaseModal = ({
           Number(formData.amountPaid) > 0
             ? [
                 {
-                  amount: Number(formData.amountPaid),
+                  amount: round2(formData.amountPaid),
                   mode: formData.paymentMode,
                   reference: formData.paymentReference,
                   date: new Date(),
@@ -526,9 +516,9 @@ const PurchaseModal = ({
 
       const response = await createPurchase({
         ...purchaseData,
-        freight: Number(formData.freight) || 0,
-        tcs: Number(formData.tcs) || 0,
-        amountPaid: Number(formData.amountPaid) || 0,
+        freight: round2(formData.freight),
+        tcs: round2(formData.tcs),
+        amountPaid: round2(formData.amountPaid),
         paymentMode: formData.paymentMode,
         paymentReference: formData.paymentReference,
       });
@@ -668,13 +658,13 @@ const PurchaseModal = ({
         {item.pieces || "-"}
       </TableCell>,
       <TableCell key="weight" className="text-right">
-        {item.weight ? `${item.weight.toFixed(2)} kg` : "-"}
+        {item.weight ? formatQty(item.weight, "kg") : "-"}
       </TableCell>,
       <TableCell key="rate" className="text-right">
-        {formatCurrency(item.rate)}
+        {formatINR(item.rate)}
       </TableCell>,
       <TableCell key="amount" className="text-right">
-        {formatCurrency(item.amount)}
+        {formatINR(item.amount)}
       </TableCell>
     );
 
@@ -897,7 +887,7 @@ const PurchaseModal = ({
                             Total
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(processedData.totalAmount)}
+                            {formatINR(processedData.totalAmount)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -1026,7 +1016,7 @@ const PurchaseModal = ({
               calculateFinalAmounts={calculateFinalAmounts}
               processedData={processedData}
               formData={formData}
-              formatCurrency={formatCurrency}
+              formatCurrency={formatINR}
             />
           </div>
         )}

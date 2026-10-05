@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { getPurchaseHistory } from "@/api/items";
 import { format } from "date-fns";
+import { formatINR, formatQty } from "@/utils/format";
 
 interface PurchaseHistoryItem {
   _id: string;
@@ -62,14 +63,6 @@ export default function PriceHistoryModal({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
@@ -84,13 +77,13 @@ export default function PriceHistoryModal({
             <div>
               <p className="text-sm text-muted-foreground">Current Rate</p>
               <p className="text-lg font-semibold">
-                {formatCurrency(itemInfo.currentRate || 0)}
+                {formatINR(itemInfo.currentRate || 0)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Average Rate</p>
               <p className="text-lg font-semibold text-primary">
-                {formatCurrency(itemInfo.averageRate || 0)}
+                {formatINR(itemInfo.averageRate || 0)}
               </p>
             </div>
           </div>
@@ -144,13 +137,13 @@ export default function PriceHistoryModal({
                         {item.documentNumber}
                       </td>
                       <td className="p-3 align-middle text-sm text-right">
-                        {item.quantity}
+                        {formatQty(item.quantity)}
                       </td>
                       <td className="p-3 align-middle text-sm text-right">
-                        {formatCurrency(item.rate)}
+                        {formatINR(item.rate)}
                       </td>
                       <td className="p-3 align-middle text-sm text-right font-medium">
-                        {formatCurrency(item.averageRate)}
+                        {formatINR(item.averageRate)}
                       </td>
                     </tr>
                   ))}

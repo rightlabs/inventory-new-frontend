@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { downloadLedgerStatement } from "@/api/transaction";
+import { formatINR } from "@/utils/format";
 
 export interface TransactionData {
   _id: string;
@@ -81,13 +82,6 @@ export function LedgerModal({
     return new Date(date).toLocaleDateString();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(Math.abs(amount || 0) < 0.005 ? 0 : amount);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-3xl">
@@ -139,10 +133,10 @@ export function LedgerModal({
                     {transaction.mode}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency(transaction.amount)}
+                    {formatINR(transaction.amount)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency(transaction.balance)}
+                    {formatINR(transaction.balance)}
                   </TableCell>
                 </TableRow>
               ))}

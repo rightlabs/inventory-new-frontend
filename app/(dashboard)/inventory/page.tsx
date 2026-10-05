@@ -29,6 +29,7 @@ import { Edit2, Package, History, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
+import { useUser } from "@/contexts/userContext";
 import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import {
@@ -38,6 +39,7 @@ import {
   PipeSheetItem,
   PolishItem,
 } from "@/types/type";
+import { formatINR, formatQty } from "@/utils/format";
 
 // Constants
 const FITTING_SUBCATEGORIES = [
@@ -102,6 +104,9 @@ const POLISH_SUBCATEGORIES = [
 const GRADES = ["304", "202"];
 
 export default function ItemsPage() {
+  const { user } = useUser();
+  // Only admin can edit items (backend enforces this too).
+  const isAdmin = user?.role === "admin";
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -283,16 +288,16 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.grade}</td>
               <td className="p-4 align-middle">{item.size}</td>
               <td className="p-4 align-middle">{item.gauge}</td>
-              <td className="p-4 align-middle text-right">{item.pieces}</td>
+              <td className="p-4 align-middle text-right">{formatQty(item.pieces)}</td>
               <td className="p-4 align-middle text-right">
-                {Number(item.currentStock).toFixed(2).replace(/[.,]00$/, "")} ({item.unitType})
+                {formatQty(item.currentStock)} ({item.unitType})
               </td>
               <td className="p-4 align-middle text-right">
-                ₹{item.purchaseRate.toFixed(2)}
+                {formatINR(item.purchaseRate)}
               </td>
               <td className="p-4 align-middle text-right">
                 <span className="text-primary font-medium">
-                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2)}
+                  {formatINR((item as any).averageRate || item.purchaseRate)}
                 </span>
               </td>
               <td className="p-4 align-middle">
@@ -312,18 +317,20 @@ export default function ItemsPage() {
                   >
                     <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="group"
-                    title="Edit Item"
-                    onClick={() => {
-                      setSelectedItem(item);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="group"
+                      title="Edit Item"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setOpen(true);
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -387,17 +394,15 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.size}</td>
               <td className="p-4 align-middle">{item.subCategory}</td>
               <td className="p-4 align-middle text-right">
-                {Number(item.currentStock)
-                  .toFixed(2)
-                  .replace(/[.,]00$/, "")}{" "}
+                {formatQty(item.currentStock)}{" "}
                 ({item?.unitType})
               </td>
               <td className="p-4 align-middle text-right">
-                ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
+                {formatINR(item.purchaseRate)}
               </td>
               <td className="p-4 align-middle text-right">
                 <span className="text-primary font-medium">
-                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2).replace(/[.,]00$/, "")}
+                  {formatINR((item as any).averageRate || item.purchaseRate)}
                 </span>
               </td>
               <td className="p-4 align-middle">
@@ -417,18 +422,20 @@ export default function ItemsPage() {
                   >
                     <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="group"
-                    title="Edit Item"
-                    onClick={() => {
-                      setSelectedItem(item);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="group"
+                      title="Edit Item"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setOpen(true);
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -482,16 +489,14 @@ export default function ItemsPage() {
               <td className="p-4 align-middle">{item.type}</td>
               <td className="p-4 align-middle">{item.specification}</td>
               <td className="p-4 align-middle text-right">
-                {Number(item.currentStock)
-                  .toFixed(2)
-                  .replace(/[.,]00$/, "")}
+                {formatQty(item.currentStock)}
               </td>
               <td className="p-4 align-middle text-right">
-                ₹{item.purchaseRate.toFixed(2).replace(/[.,]00$/, "")}
+                {formatINR(item.purchaseRate)}
               </td>
               <td className="p-4 align-middle text-right">
                 <span className="text-primary font-medium">
-                  ₹{((item as any).averageRate || item.purchaseRate).toFixed(2).replace(/[.,]00$/, "")}
+                  {formatINR((item as any).averageRate || item.purchaseRate)}
                 </span>
               </td>
               <td className="p-4 align-middle">
@@ -511,18 +516,20 @@ export default function ItemsPage() {
                   >
                     <History className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="group"
-                    title="Edit Item"
-                    onClick={() => {
-                      setSelectedItem(item);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="group"
+                      title="Edit Item"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setOpen(true);
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>

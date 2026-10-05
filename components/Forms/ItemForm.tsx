@@ -19,6 +19,11 @@ import {
   SaleItem,
 } from "@/types/type";
 import { toast } from "react-hot-toast";
+import { round2 } from "@/utils/format";
+
+// Pre-fill numeric inputs at 2 dp (e.g. 86.85000000000001 -> 86.85).
+const prefill2 = (v: unknown): number | string =>
+  v === null || v === undefined || v === "" ? "" : round2(v as number);
 
 interface ItemFormProps {
   initialData?: InventoryItem | null;
@@ -74,11 +79,11 @@ export default function ItemForm({
     itemType,
     name: initialData?.name || "",
     code: initialData?.code || "",
-    currentStock: initialData?.currentStock ?? "",
-    pieces: (initialData as any)?.pieces ?? "",
+    currentStock: prefill2(initialData?.currentStock),
+    pieces: prefill2((initialData as any)?.pieces),
     minimumStock: initialData?.minimumStock ?? "",
-    purchaseRate: initialData?.purchaseRate ?? "",
-    sellingRate: initialData?.sellingRate ?? "",
+    purchaseRate: prefill2(initialData?.purchaseRate),
+    sellingRate: prefill2(initialData?.sellingRate),
     margin: initialData?.margin ?? "",
     unitType: initialData?.unitType || "pieces",
     // Type specific fields
@@ -86,7 +91,7 @@ export default function ItemForm({
     grade: (initialData as any)?.grade || "304",
     size: initialData?.size || "",
     gauge: (initialData as any)?.gauge || "",
-    weight: (initialData as any)?.weight ?? "",
+    weight: prefill2((initialData as any)?.weight),
     subCategory: (initialData as any)?.subCategory || "",
     specification: (initialData as any)?.specification || "",
     variant: (initialData as any)?.variant || null,

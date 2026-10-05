@@ -71,9 +71,9 @@ export default function PaymentModal({
     if (document) {
       setFormData((prev: PaymentFormData) => ({
         ...prev,
-        amount: (Math.floor(document.balanceAmount * 1000) / 1000)
-          .toFixed(3)
-          .replace(/[.,]00$/, ""),
+        // 2 dp, floored (with a tiny epsilon for float noise) so it never
+        // exceeds the outstanding balance.
+        amount: String(Math.floor(document.balanceAmount * 100 + 1e-6) / 100),
       }));
     }
   };
