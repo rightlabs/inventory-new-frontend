@@ -31,6 +31,16 @@ interface ReturnItemsModalProps {
   onSuccess: () => void;
 }
 
+// A line sold by kg (pipes/sheets, kg-sold fittings/polish). Its `pieces` is a
+// separate physical-piece counter. Pieces-unit lines: pieces = quantity.
+const isWeightLine = (item: SaleItem) => Number(item.weight) > 0;
+const isPipeSheetLine = (item: SaleItem) =>
+  item.itemModel === "PipeSheet" || item.type === "pipe" || item.type === "sheet";
+const soldPieces = (item: SaleItem) =>
+  isWeightLine(item)
+    ? Number(item.pieces || 0)
+    : Number(item.pieces || item.quantity || 0);
+
 export default function ReturnItemsModal({
   open,
   onOpenChange,
@@ -41,6 +51,9 @@ export default function ReturnItemsModal({
     [index: number]: boolean;
   }>({});
   const [returnQuantities, setReturnQuantities] = useState<{
+    [index: number]: string;
+  }>({});
+  const [returnPieces, setReturnPieces] = useState<{
     [index: number]: string;
   }>({});
   const [reason, setReason] = useState("");
@@ -55,19 +68,63 @@ export default function ReturnItemsModal({
     return round2(originalQty - alreadyReturned);
   };
 
+  // Pieces already returned on a line. Rows saved before the Oct 2026 fix
+  // stored the kg number as pieces on weight lines, so those are estimated
+  // pro-rata by kg (same rule as the backend).
+  const getAvailablePieces = (itemIndex: number, saleItem: SaleItem) => {
+    const sold = soldPieces(saleItem);
+    const returned = (sale.returnedItems || [])
+      .filter((ri) => ri.itemIndex === itemIndex)
+      .reduce((sum, ri) => {
+        if (ri.piecesTracked || !isWeightLine(saleItem)) {
+          return sum + Number(ri.piecesReturned || 0);
+        }
+        const kg = Number(saleItem.weight) || 0;
+        return sum + (sold > 0 && kg > 0 ? Math.round((sold * ri.quantityReturned) / kg) : 0);
+      }, 0);
+    return Math.max(0, sold - returned);
+  };
+
+  // Lines that need a separate Pieces box: kg lines that tracked pieces.
+  const needsPiecesBox = (index: number, item: SaleItem) =>
+    isWeightLine(item) && soldPieces(item) > 0 && getAvailablePieces(index, item) > 0;
+
   const handleCheckItem = (index: number, checked: boolean) => {
     setSelectedItems((prev) => ({ ...prev, [index]: checked }));
     if (!checked) {
-      setReturnQuantities((prev) => {
+      const drop = (prev: { [index: number]: string }) => {
         const updated = { ...prev };
         delete updated[index];
         return updated;
-      });
+      };
+      setReturnQuantities(drop);
+      setReturnPieces(drop);
     } else {
-      const available = getAvailableQuantity(index, sale.items[index]);
+      const item = sale.items[index];
+      const available = getAvailableQuantity(index, item);
       setReturnQuantities((prev) => ({
         ...prev,
         [index]: available.toString(),
+      }));
+      // Full return by default → all remaining pieces come back too.
+      if (needsPiecesBox(index, item)) {
+        setReturnPieces((prev) => ({
+          ...prev,
+          [index]: String(getAvailablePieces(index, item)),
+        }));
+      }
+    }
+  };
+
+  const handleQtyChange = (index: number, value: string) => {
+    setReturnQuantities((prev) => ({ ...prev, [index]: value }));
+    // Partial kg return: make the user enter the pieces explicitly.
+    const item = sale.items[index];
+    if (needsPiecesBox(index, item)) {
+      const full = round2(value) >= getAvailableQuantity(index, item) - 1e-6;
+      setReturnPieces((prev) => ({
+        ...prev,
+        [index]: full ? String(getAvailablePieces(index, item)) : "",
       }));
     }
   };
@@ -93,7 +150,13 @@ export default function ReturnItemsModal({
       .map(([indexStr]) => {
         const index = Number(indexStr);
         const qty = round2(returnQuantities[index]);
-        return { itemIndex: index, quantity: qty };
+        const saleItem = sale.items[index];
+        const pieces = needsPiecesBox(index, saleItem)
+          ? returnPieces[index] === undefined || returnPieces[index] === ""
+            ? undefined
+            : Number(returnPieces[index])
+          : undefined;
+        return { itemIndex: index, quantity: qty, pieces };
       })
       .filter((item) => item.quantity > 0);
 
@@ -114,6 +177,27 @@ export default function ReturnItemsModal({
           `Return quantity for ${sale.items[item.itemIndex].name} exceeds available (${formatQty(available)})`
         );
         return;
+      }
+      const saleItem = sale.items[item.itemIndex];
+      if (needsPiecesBox(item.itemIndex, saleItem)) {
+        const maxPieces = getAvailablePieces(item.itemIndex, saleItem);
+        if (item.pieces === undefined && isPipeSheetLine(saleItem)) {
+          toast.error(`Enter the number of pieces returned for ${saleItem.name}`);
+          return;
+        }
+        const p = item.pieces ?? 0;
+        if (!Number.isInteger(p) || p < 0) {
+          toast.error(`Pieces for ${saleItem.name} must be a whole number`);
+          return;
+        }
+        if (isPipeSheetLine(saleItem) && p < 1) {
+          toast.error(`Enter the number of pieces returned for ${saleItem.name}`);
+          return;
+        }
+        if (p > maxPieces) {
+          toast.error(`Only ${maxPieces} pieces of ${saleItem.name} can be returned`);
+          return;
+        }
       }
     }
 
@@ -160,7 +244,7 @@ export default function ReturnItemsModal({
   );
 
   return (
-    <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+    <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>
           Return / Cancel — {sale.saleNumber}
@@ -199,6 +283,9 @@ export default function ReturnItemsModal({
                   <th className="p-3 text-right text-sm font-medium w-24">
                     Return Qty
                   </th>
+                  <th className="p-3 text-right text-sm font-medium w-24">
+                    Pieces
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -207,6 +294,9 @@ export default function ReturnItemsModal({
                     item.weight || item.quantity || item.pieces || 0;
                   const available = getAvailableQuantity(index, item);
                   if (available <= 1e-6) return null;
+                  const unit = isWeightLine(item) ? "kg" : "pcs";
+                  const piecesBox = needsPiecesBox(index, item);
+                  const piecesAvail = getAvailablePieces(index, item);
 
                   return (
                     <tr key={index} className="border-b">
@@ -219,24 +309,69 @@ export default function ReturnItemsModal({
                         />
                       </td>
                       <td className="p-3 text-sm">{item.name}</td>
-                      <td className="p-3 text-sm text-right">{formatQty(originalQty)}</td>
-                      <td className="p-3 text-sm text-right">{formatQty(available)}</td>
+                      <td className="p-3 text-sm text-right whitespace-nowrap">
+                        {formatQty(originalQty, unit)}
+                        {isWeightLine(item) && soldPieces(item) > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {soldPieces(item)} pcs
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-sm text-right whitespace-nowrap">
+                        {formatQty(available, unit)}
+                        {piecesBox && (
+                          <div className="text-xs text-muted-foreground">
+                            {piecesAvail} pcs
+                          </div>
+                        )}
+                      </td>
                       <td className="p-3">
                         {selectedItems[index] && (
                           <Input
                             type="number"
-                            min={1}
+                            min={0}
                             max={available}
+                            aria-label={`Return quantity for ${item.name}`}
                             value={returnQuantities[index] || ""}
-                            onChange={(e) =>
-                              setReturnQuantities((prev) => ({
-                                ...prev,
-                                [index]: e.target.value,
-                              }))
-                            }
+                            onChange={(e) => handleQtyChange(index, e.target.value)}
                             className="h-8 w-20 ml-auto text-right"
                           />
                         )}
+                      </td>
+                      <td className="p-3 text-right">
+                        {selectedItems[index] &&
+                          (piecesBox ? (
+                            <div>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={piecesAvail}
+                                step={1}
+                                inputMode="numeric"
+                                aria-label={`Pieces returned for ${item.name}`}
+                                placeholder={isPipeSheetLine(item) ? "Req." : "0"}
+                                value={returnPieces[index] ?? ""}
+                                onChange={(e) =>
+                                  setReturnPieces((prev) => ({
+                                    ...prev,
+                                    [index]: e.target.value.replace(/[^\d]/g, ""),
+                                  }))
+                                }
+                                className={`h-8 w-20 ml-auto text-right ${
+                                  isPipeSheetLine(item) && !returnPieces[index]
+                                    ? "border-red-400"
+                                    : ""
+                                }`}
+                              />
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                max {piecesAvail}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {isWeightLine(item) ? "—" : "same as qty"}
+                            </span>
+                          ))}
                       </td>
                     </tr>
                   );

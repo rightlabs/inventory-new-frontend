@@ -153,6 +153,7 @@ export interface ReturnedItem {
   quantityReturned: number;
   weightReturned?: number;
   piecesReturned?: number;
+  piecesTracked?: boolean; // true = piecesReturned is exact (rows since Oct 2026)
   amount: number;
   returnDate: string;
   reason?: string;

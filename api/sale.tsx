@@ -87,7 +87,7 @@ export const cancelSale = async (saleId: string, reason?: string) => {
 export const returnSaleItems = async (
   saleId: string,
   data: {
-    items: { itemIndex: number; quantity: number }[];
+    items: { itemIndex: number; quantity: number; pieces?: number }[];
     reason?: string;
   }
 ) => {
