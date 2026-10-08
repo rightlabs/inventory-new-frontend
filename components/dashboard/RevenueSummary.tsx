@@ -28,8 +28,10 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
   const netProfit = totalRevenue - totalCosts;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 h-full">
-      <div className="sm:col-span-2 bg-white rounded-lg p-4 min-w-0">
+    // The summary sits under the chart as a wrapping row: this card is only half
+    // the dashboard wide, and a side column (126px at 1280) cut "-₹1,06,542.93".
+    <div className="grid grid-cols-1 gap-6 h-full">
+      <div className="bg-white rounded-lg p-4 min-w-0">
         <h4 className="text-sm font-medium text-gray-600 mb-4">
           Revenue vs Costs
         </h4>
@@ -68,27 +70,27 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4">
+      <div className="bg-gray-50 rounded-lg p-4 min-w-0">
         <h4 className="text-sm font-medium text-gray-600 mb-4">
           Financial Summary
         </h4>
-        <div className="space-y-4">
+        <div className="flex flex-wrap gap-x-8 gap-y-4">
           <div>
             <p className="text-sm text-gray-500">Total Revenue</p>
-            <p className="text-lg font-medium text-green-600">
+            <p className="text-lg font-medium text-green-600 whitespace-nowrap">
               {formatINR(totalRevenue)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Costs</p>
-            <p className="text-lg font-medium text-red-600">
+            <p className="text-lg font-medium text-red-600 whitespace-nowrap">
               {formatINR(totalCosts)}
             </p>
           </div>
-          <div className="pt-2 border-t">
+          <div>
             <p className="text-sm text-gray-500">Net Profit</p>
             <p
-              className={`text-lg font-medium ${
+              className={`text-lg font-medium whitespace-nowrap ${
                 netProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >

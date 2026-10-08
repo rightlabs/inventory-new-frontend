@@ -313,9 +313,9 @@ export default function DashboardPage() {
                 {topSellingItems.map((item, index) => (
                   <div
                     key={item._id}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
                         {index + 1}
                       </span>
@@ -326,7 +326,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <p className="font-semibold text-sm">
+                    <p className="font-semibold text-sm whitespace-nowrap">
                       {formatINR(item.totalValue)}
                     </p>
                   </div>
