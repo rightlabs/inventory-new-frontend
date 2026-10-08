@@ -205,7 +205,14 @@ export default function SalesPage() {
             Create and manage your sales orders
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o);
+            // Fresh stock every time the form opens (other users / purchases).
+            if (o) fetchItems();
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-primary">
               <Plus className="mr-2 h-4 w-4" /> Create Sale
@@ -216,7 +223,11 @@ export default function SalesPage() {
             onOpenChange={setOpen}
             customers={customers}
             isLoading={isLoading}
-            onSuccess={fetchSales}
+            onSuccess={() => {
+              // A sale moves stock: reload the item list so the picker is current.
+              fetchSales();
+              fetchItems();
+            }}
             fetchCustomers={fetchCustomers}
             items={items}
           />
@@ -409,7 +420,9 @@ export default function SalesPage() {
             onOpenChange={setShowReturnModal}
             sale={selectedSaleForReturn}
             onSuccess={() => {
-              fetchSales();
+              // Returns and cancels put stock back: reload items too.
+              fetchSales(pagination.currentPage);
+              fetchItems();
               setSelectedSaleForReturn(null);
             }}
           />
