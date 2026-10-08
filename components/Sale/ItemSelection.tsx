@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { InventoryItem } from "@/types/type";
 import { Search, Package, AlertCircle } from "lucide-react";
 import { formatINR, formatQty, round2 } from "@/utils/format";
+import { getItemCost, ItemCost } from "@/api/items";
 
 interface ItemSelectionProps {
   item: any;
@@ -136,6 +137,23 @@ export default function ItemSelection({
   const selectedProduct = useMemo(() => {
     return items.find((p: any) => p._id === item.itemId);
   }, [items, item.itemId]);
+
+  // How the purchase rate was built (bill rate + freight/logistics share of
+  // the latest purchase) — shown under "Purchase Rate".
+  const [cost, setCost] = useState<ItemCost | null>(null);
+  useEffect(() => {
+    setCost(null);
+    if (!item.itemId) return;
+    let live = true;
+    getItemCost(item.itemId)
+      .then((c) => live && setCost(c))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [item.itemId]);
+  const lastBuy = cost?.lastPurchase;
+  const showLogistics = !!lastBuy && lastBuy.isCurrent && lastBuy.logisticsPerUnit > 0;
 
   // Handle category change
   const handleCategoryChange = (value: string) => {
@@ -514,6 +532,12 @@ export default function ItemSelection({
                 onKeyDown={handleNumericKeyDown}
                 placeholder="Enter rate"
               />
+              {showLogistics && lastBuy && (
+                <p className="text-xs text-muted-foreground mt-1" data-testid="cost-breakdown">
+                  Incl. logistics: {formatINR(lastBuy.baseRate)} + {formatINR(lastBuy.logisticsPerUnit)}/
+                  {selectedProduct.unitType === "weight" ? "kg" : "pc"} ({lastBuy.purchaseNumber})
+                </p>
+              )}
             </div>
 
             {/* Margin */}

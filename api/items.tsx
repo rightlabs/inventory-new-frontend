@@ -97,6 +97,28 @@ export const getPurchaseHistory = async (itemId: string) => {
   }
 };
 
+// Cost shown on the sale form: purchase rate (latest landed rate) and how the
+// latest entered purchase built it (bill rate + logistics per unit).
+export interface ItemCost {
+  itemId: string;
+  unitType: "weight" | "pieces";
+  purchaseRate: number;
+  averageRate: number;
+  lastPurchase: {
+    purchaseNumber: string;
+    date: string;
+    baseRate: number;
+    logisticsPerUnit: number;
+    landedRate: number;
+    isCurrent: boolean;
+  } | null;
+}
+
+export const getItemCost = async (itemId: string) => {
+  const res = await API_INSTANCE.get<{ data: ItemCost }>(`/items/${itemId}/cost`);
+  return res.data.data;
+};
+
 export interface InventoryReturnLine {
   itemId: string;
   weight?: number;

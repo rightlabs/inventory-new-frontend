@@ -19,6 +19,10 @@ interface PurchaseHistoryItem {
   quantity: number;
   documentNumber: string;
   averageRate: number;
+  // Bill rate + freight/logistics per unit = landed rate (the cost used).
+  baseRate?: number;
+  logisticsPerUnit?: number;
+  landedRate?: number;
 }
 
 interface PriceHistoryModalProps {
@@ -65,7 +69,7 @@ export default function PriceHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[720px] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Price History</DialogTitle>
           <DialogDescription>{itemName}</DialogDescription>
@@ -104,7 +108,7 @@ export default function PriceHistoryModal({
             </div>
           ) : (
             <div className="rounded-md border">
-              <table className="w-full">
+              <table className="w-full" data-testid="price-history-table">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -116,8 +120,14 @@ export default function PriceHistoryModal({
                     <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Qty
                     </th>
+                    <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground whitespace-nowrap">
+                      Bill Rate
+                    </th>
                     <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
-                      Rate
+                      Logistics
+                    </th>
+                    <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Cost
                     </th>
                     <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Avg Rate
@@ -140,7 +150,13 @@ export default function PriceHistoryModal({
                         {formatQty(item.quantity)}
                       </td>
                       <td className="p-3 align-middle text-sm text-right">
-                        {formatINR(item.rate)}
+                        {formatINR(item.baseRate ?? item.rate)}
+                      </td>
+                      <td className="p-3 align-middle text-sm text-right text-muted-foreground">
+                        {item.logisticsPerUnit ? `+${formatINR(item.logisticsPerUnit)}` : "–"}
+                      </td>
+                      <td className="p-3 align-middle text-sm text-right">
+                        {formatINR(item.landedRate ?? item.rate)}
                       </td>
                       <td className="p-3 align-middle text-sm text-right font-medium">
                         {formatINR(item.averageRate)}
