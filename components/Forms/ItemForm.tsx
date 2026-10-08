@@ -355,6 +355,7 @@ export default function ItemForm({
               setFormData({ ...formData, currentStock: e.target.value })
             }
             placeholder="Enter stock"
+            required
           />
         </div>
         {/* Current Pieces — for weight-sold items (pipe/sheet + kg-sold
@@ -370,6 +371,7 @@ export default function ItemForm({
                 setFormData({ ...formData, pieces: e.target.value })
               }
               placeholder="Enter pieces"
+              required
             />
           </div>
         )}

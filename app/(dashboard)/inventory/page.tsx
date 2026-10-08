@@ -651,9 +651,10 @@ export default function ItemsPage() {
       }
       setOpen(false);
       fetchItems(); // Refresh the list
-    } catch (error) {
+    } catch (error: any) {
       toast.error(
-        selectedItem ? "Failed to update item" : "Failed to create item"
+        error?.response?.data?.message ||
+          (selectedItem ? "Failed to update item" : "Failed to create item")
       );
     }
   };
