@@ -235,7 +235,7 @@ export default function VendorsPage() {
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Status
                     </th>
-                    <th className="h-12 px-4 text-center align-middle text-sm font-medium text-muted-foreground">
+                    <th className="h-12 px-2 text-center align-middle text-sm font-medium text-muted-foreground">
                       Actions
                     </th>
                   </tr>
@@ -264,12 +264,12 @@ export default function VendorsPage() {
                       <td className="p-4 align-middle">
                         <StatusBadge status={vendor.status} />
                       </td>
-                      <td className="p-4 align-middle">
-                        <div className="flex justify-center gap-1">
+                      <td className="px-2 py-4 align-middle">
+                        <div className="flex justify-center">
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="group"
+                            size="sm"
+                            className="h-8 w-8 p-0 group"
                             title="Record Payment"
                             aria-label={`Record payment to ${vendor.name}`}
                             onClick={() =>
@@ -284,8 +284,8 @@ export default function VendorsPage() {
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="group"
+                            size="sm"
+                            className="h-8 w-8 p-0 group"
                             title="View Ledger"
                             aria-label={`View ledger of ${vendor.name}`}
                             onClick={() => handleViewLedger(vendor?._id)}
