@@ -31,7 +31,7 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<VendorFormData>();
 
   const onSubmit = async (data: VendorFormData) => {
@@ -246,8 +246,12 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
                   valueAsNumber: true,
                 })}
                 type="number"
+                step="0.01"
                 placeholder="Enter opening balance"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use minus (e.g. -5000) if you paid this vendor in advance.
+              </p>
             </div>
           </div>
         </div>
@@ -267,7 +271,9 @@ export default function VendorForm({ onSuccess, onCancel }: VendorFormProps) {
             Cancel
           </Button>
         )}
-        <Button type="submit">Add Vendor</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Adding..." : "Add Vendor"}
+        </Button>
       </div>
     </form>
   );

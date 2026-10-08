@@ -96,9 +96,17 @@ export const addCustomerAdvance = async (
   }
 };
 
+export interface AccountPaymentData {
+  amount: number;
+  mode: "cash" | "cheque" | "online";
+  reference?: string;
+  notes?: string;
+  date?: string; // YYYY-MM-DD; default today; future rejected by the server
+}
+
 export const recordCustomerPayment = async (
   customerId: string,
-  data: { amount: number; mode: string; reference?: string; notes?: string }
+  data: AccountPaymentData
 ) => {
   try {
     const res = await API_INSTANCE.post(

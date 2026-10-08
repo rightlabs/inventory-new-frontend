@@ -21,7 +21,8 @@ import {
 } from "@/api/customer";
 import { Customer, CustomerDetail } from "@/types/type";
 import CustomerForm from "@/components/Forms/CustomerForm";
-import AdvancePaymentModal from "@/components/Forms/AdvancePaymentModal";
+import RecordPaymentModal from "@/components/Forms/RecordPaymentModal";
+import BalanceAmount from "@/components/BalanceAmount";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import DataPagination from "@/components/DataPagination";
 import { formatINR } from "@/utils/format";
@@ -274,8 +275,8 @@ export default function CustomersPage() {
                       <td className="p-4 align-middle text-right">
                         {formatINR(customer.creditLimit)}
                       </td>
-                      <td className="p-4 align-middle text-right">
-                        {formatINR(customer.currentBalance)}
+                      <td className="p-4 align-middle text-right whitespace-nowrap">
+                        <BalanceAmount value={customer.currentBalance} />
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatINR(customer.totalSales)}
@@ -373,38 +374,20 @@ export default function CustomersPage() {
       </Dialog>
 
       {/* Record Payment Dialog */}
-      <Dialog
+      <RecordPaymentModal
+        entityType="customer"
+        target={advanceCustomer}
         open={advanceOpen}
         onOpenChange={(open) => {
           setAdvanceOpen(open);
           if (!open) setAdvanceCustomer(null);
         }}
-      >
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
-            <DialogDescription>
-              Record a payment received from the customer
-            </DialogDescription>
-          </DialogHeader>
-          {advanceCustomer && (
-            <AdvancePaymentModal
-              customerId={advanceCustomer._id}
-              customerName={advanceCustomer.name}
-              currentBalance={advanceCustomer.currentBalance}
-              onSuccess={() => {
-                setAdvanceOpen(false);
-                setAdvanceCustomer(null);
-                fetchCustomers(pagination.currentPage);
-              }}
-              onCancel={() => {
-                setAdvanceOpen(false);
-                setAdvanceCustomer(null);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        onSuccess={() => {
+          setAdvanceOpen(false);
+          setAdvanceCustomer(null);
+          fetchCustomers(pagination.currentPage);
+        }}
+      />
 
       {showLedger && selectedCustomerId && (
         <LedgerModal

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Plus, ScrollText, Search } from "lucide-react";
+import { Download, Plus, ScrollText, Search, Wallet } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getVendors } from "@/api/vendor";
 import VendorForm from "@/components/Forms/VendorForm";
@@ -19,6 +19,10 @@ import {
 import { getVendorLedger } from "@/api/transaction";
 import { LedgerModal, TransactionData } from "@/components/Forms/LedgerModal";
 import { formatINR } from "@/utils/format";
+import RecordPaymentModal, {
+  PaymentTarget,
+} from "@/components/Forms/RecordPaymentModal";
+import BalanceAmount from "@/components/BalanceAmount";
 interface Vendor {
   _id: string;
   id: string;
@@ -43,6 +47,7 @@ export default function VendorsPage() {
   const [showLedger, setShowLedger] = useState(false);
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+  const [paymentVendor, setPaymentVendor] = useState<PaymentTarget | null>(null);
 
   const fetchVendors = async () => {
     try {
@@ -230,8 +235,8 @@ export default function VendorsPage() {
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Status
                     </th>
-                    <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
-                      Ledger
+                    <th className="h-12 px-4 text-center align-middle text-sm font-medium text-muted-foreground">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -253,21 +258,41 @@ export default function VendorsPage() {
                       <td className="p-4 align-middle text-right">
                         {vendor.creditLimit ? formatINR(vendor.creditLimit) : "-"}
                       </td>
-                      <td className="p-4 align-middle text-right">
-                        {formatINR(vendor?.currentBalance)}
+                      <td className="p-4 align-middle text-right whitespace-nowrap">
+                        <BalanceAmount value={vendor?.currentBalance} />
                       </td>
                       <td className="p-4 align-middle">
                         <StatusBadge status={vendor.status} />
                       </td>
                       <td className="p-4 align-middle">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 group"
-                          onClick={() => handleViewLedger(vendor?._id)}
-                        >
-                          <ScrollText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                        </Button>
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group"
+                            title="Record Payment"
+                            aria-label={`Record payment to ${vendor.name}`}
+                            onClick={() =>
+                              setPaymentVendor({
+                                _id: vendor._id,
+                                name: vendor.name,
+                                currentBalance: vendor.currentBalance,
+                              })
+                            }
+                          >
+                            <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group"
+                            title="View Ledger"
+                            aria-label={`View ledger of ${vendor.name}`}
+                            onClick={() => handleViewLedger(vendor?._id)}
+                          >
+                            <ScrollText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -277,6 +302,18 @@ export default function VendorsPage() {
           )}
         </CardContent>
       </Card>
+      <RecordPaymentModal
+        entityType="vendor"
+        target={paymentVendor}
+        open={!!paymentVendor}
+        onOpenChange={(o) => {
+          if (!o) setPaymentVendor(null);
+        }}
+        onSuccess={() => {
+          setPaymentVendor(null);
+          fetchVendors();
+        }}
+      />
       {showLedger && (
         <LedgerModal
           transactions={transactions}

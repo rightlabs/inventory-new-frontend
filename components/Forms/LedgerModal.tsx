@@ -18,6 +18,7 @@ import { Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { downloadLedgerStatement } from "@/api/transaction";
 import { formatINR } from "@/utils/format";
+import BalanceAmount from "@/components/BalanceAmount";
 
 export interface TransactionData {
   _id: string;
@@ -79,7 +80,7 @@ export function LedgerModal({
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString();
+    return new Date(date).toLocaleDateString("en-IN");
   };
 
   return (
@@ -117,7 +118,15 @@ export function LedgerModal({
               {transactions.map((transaction) => (
                 <TableRow key={transaction._id}>
                   <TableCell>{formatDate(transaction.date)}</TableCell>
-                  <TableCell>{transaction.documentNumber}</TableCell>
+                  <TableCell>
+                    <div>{transaction.documentNumber}</div>
+                    {(transaction.notes || transaction.reference) && (
+                      <div className="text-xs text-muted-foreground max-w-[260px]">
+                        {transaction.notes}
+                        {transaction.reference ? ` · Ref: ${transaction.reference}` : ""}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`${
@@ -135,8 +144,8 @@ export function LedgerModal({
                   <TableCell className="text-right">
                     {formatINR(transaction.amount)}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {formatINR(transaction.balance)}
+                  <TableCell className="text-right whitespace-nowrap">
+                    <BalanceAmount value={transaction.balance} />
                   </TableCell>
                 </TableRow>
               ))}

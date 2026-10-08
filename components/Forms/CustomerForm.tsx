@@ -261,15 +261,15 @@ export default function CustomerForm({
               <Input
                 {...register("openingBalance", {
                   valueAsNumber: true,
-                  min: {
-                    value: 0,
-                    message: "Opening balance cannot be negative",
-                  },
                 })}
                 type="number"
+                step="0.01"
                 placeholder="Enter opening balance"
                 className={errors.openingBalance ? "border-red-500" : ""}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use minus (e.g. -5000) if the customer paid in advance.
+              </p>
               {errors.openingBalance && (
                 <p className="text-red-500 text-xs mt-1">
                   {errors.openingBalance.message}
