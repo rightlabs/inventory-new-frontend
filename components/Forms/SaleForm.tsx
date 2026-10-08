@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import CustomerForm from "./CustomerForm";
 import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
+import BalanceAmount from "@/components/BalanceAmount";
 import ItemSelection from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
 import { formatINR, formatQty, round2 } from "@/utils/format";
@@ -620,7 +621,11 @@ export default function SalesForm({
                       Credit Limit: {formatINR(selectedCustomer?.creditLimit || 0)}
                     </p>
                     <p>
-                      Current Balance: {formatINR(selectedCustomer?.currentBalance || 0)}
+                      Balance:{" "}
+                      <BalanceAmount
+                        value={selectedCustomer?.currentBalance || 0}
+                        entity="customer"
+                      />
                     </p>
                     <Button
                       variant="link"
