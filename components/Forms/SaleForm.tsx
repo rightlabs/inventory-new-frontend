@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -118,6 +118,11 @@ export default function SalesForm({
     [key: number]: QuantityError;
   }>({});
   const [showPreview, setShowPreview] = useState(false);
+  // Own save lock for Confirm Sale. (The `isLoading` prop is the sales LIST
+  // loading flag, so it never covered this request → double sales.) The ref
+  // blocks a second click that lands before React re-renders the button.
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([]);
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
@@ -354,6 +359,9 @@ export default function SalesForm({
   };
 
   const handleConfirmSale = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     try {
       const calculations = calculateTotals();
 
@@ -404,6 +412,9 @@ export default function SalesForm({
       }
     } catch (error) {
       toast.error("Failed to create sale");
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -547,11 +558,15 @@ export default function SalesForm({
 
           {/* Preview Action Buttons */}
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setShowPreview(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(false)}
+              disabled={isSaving}
+            >
               Back to Edit
             </Button>
-            <Button onClick={handleConfirmSale} disabled={isLoading}>
-              Confirm Sale
+            <Button onClick={handleConfirmSale} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Confirm Sale"}
             </Button>
           </div>
         </>

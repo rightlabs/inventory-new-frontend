@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -190,6 +190,10 @@ const PurchaseModal = ({
   } | null>(null);
 
   const [showLedger, setShowLedger] = useState(false);
+  // Save lock: the Submit button had none, so a double click could create two
+  // purchases. The ref blocks a second click before React re-renders.
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   // const [date, setDate] = React.useState<Date>();
 
@@ -419,6 +423,9 @@ const PurchaseModal = ({
   };
 
   const handleSubmit = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     try {
       const requiredFields = [
         { name: "vendorId", label: "Vendor" },
@@ -533,6 +540,9 @@ const PurchaseModal = ({
       toast.error(
         error instanceof Error ? error.message : "Failed to create purchase"
       );
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -1027,7 +1037,9 @@ const PurchaseModal = ({
         <Button variant="outline" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit}>Submit</Button>
+        <Button onClick={handleSubmit} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Submit"}
+        </Button>
       </div>
 
       {showLedger && (
