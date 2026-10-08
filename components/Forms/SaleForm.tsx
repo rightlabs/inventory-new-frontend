@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import CustomerForm from "./CustomerForm";
 import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
+import SearchSelect, { SearchSelectOption } from "@/components/ui/SearchSelect";
 import BalanceAmount from "@/components/BalanceAmount";
 import ItemSelection from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
@@ -161,6 +162,18 @@ export default function SalesForm({
       toast.error("Failed to fetch ledger");
     }
   };
+
+  // Searchable customer picker: name, code (C012) or phone.
+  const customerOptions = useMemo<SearchSelectOption[]>(
+    () =>
+      customers.map((c) => ({
+        value: c._id,
+        label: c.name,
+        hint: c.id,
+        keywords: [c.phone, c.contactPerson].filter(Boolean).join(" "),
+      })),
+    [customers]
+  );
 
   const handleCustomerSelect = (value: string) => {
     setFormData((prev) => ({ ...prev, customerId: value }));
@@ -583,18 +596,18 @@ export default function SalesForm({
               <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">Customer*</label>
                 <div className="flex gap-2">
-                  <Select value={formData.customerId} onValueChange={handleCustomerSelect}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer._id} value={customer._id}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="min-w-0 flex-1">
+                    <SearchSelect
+                      id="sale-customer"
+                      testId="sale-customer"
+                      options={customerOptions}
+                      value={formData.customerId}
+                      onChange={handleCustomerSelect}
+                      placeholder="Select customer"
+                      searchPlaceholder="Type name, code or phone…"
+                      emptyText="No customer found"
+                    />
+                  </div>
                   <Dialog open={customerOpen} onOpenChange={setCustomerOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="icon">

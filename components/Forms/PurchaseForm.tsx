@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -34,6 +34,7 @@ import { LedgerModal, TransactionData } from "./LedgerModal";
 import { getVendorLedger } from "@/api/transaction";
 // import { format as dateFormat } from "date-fns";
 import DatePicker from "../ui/DatePicker";
+import SearchSelect, { SearchSelectOption } from "../ui/SearchSelect";
 import SummaryPurchase from "../Purchase/SummaryPurchase";
 import { formatINR, formatQty, round2 } from "@/utils/format";
 
@@ -42,6 +43,8 @@ interface Vendor {
   name: string;
   gstin: string;
   _id: string;
+  phone?: string;
+  contactPerson?: string;
 }
 
 // Update the form data interface
@@ -382,6 +385,18 @@ const PurchaseModal = ({
     }
   };
 
+  // Searchable vendor picker: name, code (V012) or phone.
+  const vendorOptions = useMemo<SearchSelectOption[]>(
+    () =>
+      vendors.map((v) => ({
+        value: v._id,
+        label: v.name,
+        hint: v.id,
+        keywords: [v.phone, v.contactPerson].filter(Boolean).join(" "),
+      })),
+    [vendors]
+  );
+
   const handleVendorSelect = (value: string) => {
     setFormData((prev) => ({ ...prev, vendorId: value }));
   };
@@ -698,27 +713,16 @@ const PurchaseModal = ({
               <label className="text-sm font-medium mb-1 block">
                 Vendor Name*
               </label>
-              <Select
+              <SearchSelect
+                id="purchase-vendor"
+                testId="purchase-vendor"
+                options={vendorOptions}
                 value={formData.vendorId}
-                onValueChange={handleVendorSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vendors.length === 0 ? (
-                    <SelectItem value="No Vendors" disabled>
-                      No vendors found
-                    </SelectItem>
-                  ) : (
-                    vendors.map((vendor) => (
-                      <SelectItem key={vendor._id} value={vendor._id}>
-                        {vendor.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                onChange={handleVendorSelect}
+                placeholder="Select vendor"
+                searchPlaceholder="Type name, code or phone…"
+                emptyText={vendors.length === 0 ? "No vendors found" : "No vendor found"}
+              />
 
               {formData.vendorId && (
                 <Button

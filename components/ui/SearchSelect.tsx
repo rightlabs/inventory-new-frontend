@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import {
   Popover,
@@ -55,6 +55,14 @@ export default function SearchSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Keep the row picked with the arrow keys in view.
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-row="${active}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [active, open]);
 
   const selected = options.find((o) => o.value === value);
 
@@ -127,6 +135,12 @@ export default function SearchSelect({
           <span className="truncate">
             {selected ? selected.label : placeholder}
           </span>
+          {/* Code next to the picked name: tells apart two customers with the same name. */}
+          {selected?.hint && (
+            <span className="ml-auto pl-2 text-xs text-muted-foreground shrink-0" data-testid="search-select-hint">
+              {selected.hint}
+            </span>
+          )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -159,6 +173,7 @@ export default function SearchSelect({
           )}
         </div>
         <div
+          ref={listRef}
           className="max-h-64 overflow-y-auto p-1"
           role="listbox"
         >
@@ -168,6 +183,7 @@ export default function SearchSelect({
               <div
                 key={row ? row.value : "__clear"}
                 role="option"
+                data-row={i}
                 aria-selected={isSel}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(row)}

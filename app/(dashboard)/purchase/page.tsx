@@ -20,6 +20,8 @@ interface Vendor {
   name: string;
   gstin: string;
   _id: string;
+  phone?: string;
+  contactPerson?: string;
 }
 
 interface Purchase {
@@ -75,6 +77,8 @@ export default function PurchasePage() {
           id: vendor.id,
           name: vendor.name,
           gstin: vendor.gstin,
+          phone: vendor.phone,
+          contactPerson: vendor.contactPerson,
         }));
 
         setVendors(transformedVendors);
