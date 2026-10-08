@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Download,
   IndianRupee,
@@ -24,6 +24,8 @@ import {
   XCircle,
   AlertCircle,
   CircleDollarSign,
+  Undo2,
+  Wallet,
 } from "lucide-react";
 import {
   LineChart,
@@ -36,51 +38,23 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import toast from "react-hot-toast";
-import { getMisSummary, getMisSalesExport, MisSummary } from "@/api/mis";
+import {
+  getMisSummary,
+  getMisSalesExport,
+  getCashBook,
+  MisSummary,
+  CashSplit,
+} from "@/api/mis";
 import { getSales } from "@/api/sale";
 import { formatINR } from "@/utils/format";
+import { downloadCsv, rowsToCsv } from "@/utils/csv";
+import DateRangeBar, { presetRange } from "@/components/mis/DateRangeBar";
+import CashBook from "@/components/mis/CashBook";
 
 const PAGE_SIZE = 10;
 
-// YYYY-MM-DD in local time (not UTC, which shifts by timezone).
-const toDateInput = (d: Date) => {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-
 const formatNumber = (n: number) =>
   new Intl.NumberFormat("en-IN").format(n || 0);
-
-const csvEscape = (v: unknown) => {
-  if (v === null || v === undefined) return "";
-  const s = String(v);
-  if (/[",\n]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-};
-
-const rowsToCsv = (rows: Record<string, unknown>[], headers: string[]) => {
-  const head = headers.map(csvEscape).join(",");
-  const body = rows
-    .map((r) => headers.map((h) => csvEscape(r[h])).join(","))
-    .join("\n");
-  return head + "\n" + body;
-};
-
-const downloadCsv = (csv: string, filename: string) => {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
 
 const STATUS_BADGE: Record<
   string,
@@ -164,14 +138,13 @@ interface SaleRow {
 }
 
 export default function AnalyticsPage() {
-  const today = new Date();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const [startDate, setStartDate] = useState(toDateInput(thirtyDaysAgo));
-  const [endDate, setEndDate] = useState(toDateInput(today));
+  // Default range: last 30 days (incl. today) — same as the "30 days" button.
+  const [startDate, setStartDate] = useState(() => presetRange(30).start);
+  const [endDate, setEndDate] = useState(() => presetRange(30).end);
+  const [tab, setTab] = useState("overview");
 
   const [summary, setSummary] = useState<MisSummary | null>(null);
+  const [moneyIn, setMoneyIn] = useState<CashSplit | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   const [sales, setSales] = useState<SaleRow[]>([]);
@@ -185,8 +158,12 @@ export default function AnalyticsPage() {
   const fetchSummary = async () => {
     setSummaryLoading(true);
     try {
-      const res = await getMisSummary(startDate, endDate);
+      const [res, cash] = await Promise.all([
+        getMisSummary(startDate, endDate),
+        getCashBook({ startDate, endDate, limit: 1 }),
+      ]);
       setSummary(res.data);
+      setMoneyIn(cash.totals.in);
     } catch (err: any) {
       toast.error(err?.message || "Failed to load MIS summary");
     } finally {
@@ -283,7 +260,7 @@ export default function AnalyticsPage() {
         value: formatINR(kpis.totalRevenue),
         icon: IndianRupee,
         tone: "text-primary",
-        sub: `${formatNumber(kpis.salesCount)} sale(s)`,
+        sub: `${formatNumber(kpis.salesCount)} sale(s), after returns`,
       },
       {
         label: "Gross Profit",
@@ -297,7 +274,23 @@ export default function AnalyticsPage() {
         value: formatINR(kpis.totalCogs),
         icon: Package,
         tone: "text-slate-600",
-        sub: "Cost of goods sold",
+        sub: "Cost of goods sold, less goods returned",
+      },
+      {
+        label: "Returns",
+        value: formatINR(kpis.returnsValue),
+        icon: Undo2,
+        tone: "text-amber-600",
+        sub: `${formatNumber(kpis.returnsCount)} return(s) · cost ${formatINR(
+          kpis.returnsCost
+        )} back in stock`,
+      },
+      {
+        label: "Money Received",
+        value: moneyIn ? formatINR(moneyIn.total) : "—",
+        icon: Wallet,
+        tone: "text-emerald-600",
+        sub: "From customers (see Cash Book)",
       },
       {
         label: "Purchases",
@@ -321,57 +314,53 @@ export default function AnalyticsPage() {
         sub: "Total in range",
       },
     ];
-  }, [kpis]);
+  }, [kpis, moneyIn]);
 
   return (
     <div className="space-y-6">
       {/* Header + Date Range */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">MIS Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Revenue, profit, and orders — filtered by date range.
+            Revenue, profit, money in / out and customers — filtered by date.
           </p>
         </div>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div>
-            <label className="text-xs text-muted-foreground block mb-1">
-              From
-            </label>
-            <Input
-              type="date"
-              value={startDate}
-              max={endDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-40"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground block mb-1">
-              To
-            </label>
-            <Input
-              type="date"
-              value={endDate}
-              min={startDate}
-              max={toDateInput(today)}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-40"
-            />
-          </div>
-          <Button onClick={handleExport} disabled={exporting}>
-            {exporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Export CSV
-          </Button>
-        </div>
+        <DateRangeBar
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => {
+            setStartDate(s);
+            setEndDate(e);
+          }}
+        />
       </div>
 
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="cash">Cash Book</TabsTrigger>
+          </TabsList>
+          {tab === "overview" && (
+            <Button onClick={handleExport} disabled={exporting}>
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export Sales CSV
+            </Button>
+          )}
+        </div>
+
+        <TabsContent value="cash" className="mt-0">
+          <CashBook startDate={startDate} endDate={endDate} />
+        </TabsContent>
+
+        <TabsContent value="overview" className="mt-0 space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryLoading && !summary && (
           <Card>
             <CardContent className="pt-6 text-muted-foreground">
@@ -408,6 +397,7 @@ export default function AnalyticsPage() {
           <CardTitle>Category Performance</CardTitle>
           <CardDescription>
             Item-level revenue and margin per category in the selected range.
+            Revenue and COGS are after returns (counted on the return day).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -423,6 +413,7 @@ export default function AnalyticsPage() {
                     <th className="p-3 text-left font-medium">Category</th>
                     <th className="p-3 text-right font-medium">Items Sold</th>
                     <th className="p-3 text-right font-medium">Revenue</th>
+                    <th className="p-3 text-right font-medium">Returns</th>
                     <th className="p-3 text-right font-medium">COGS</th>
                     <th className="p-3 text-right font-medium">Profit</th>
                     <th className="p-3 text-right font-medium">Margin</th>
@@ -435,6 +426,9 @@ export default function AnalyticsPage() {
                       <td className="p-3 text-right">{formatNumber(c.count)}</td>
                       <td className="p-3 text-right">
                         {formatINR(c.revenue)}
+                      </td>
+                      <td className="p-3 text-right">
+                        {c.returns ? formatINR(c.returns) : "—"}
                       </td>
                       <td className="p-3 text-right">
                         {formatINR(c.cogs)}
@@ -467,7 +461,8 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle>Daily Revenue vs Purchases</CardTitle>
           <CardDescription>
-            Day-by-day view of sales (excluding cancelled) and purchases.
+            Day-by-day view of sales (excluding cancelled, after customer
+            returns) and purchases.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -589,6 +584,8 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
