@@ -21,6 +21,7 @@ export const getSales = async (filters?: {
   startDate?: string;
   endDate?: string;
   customerId?: string;
+  search?: string; // bill number or customer name — searched on the server
 }) => {
   try {
     const queryParams = new URLSearchParams();

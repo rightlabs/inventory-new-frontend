@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import DataPagination from "@/components/DataPagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,8 @@ export default function SalesPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const latestSalesRequest = useRef(0); // ignore out-of-order responses
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -51,10 +53,13 @@ export default function SalesPage() {
     }
   };
 
-  const fetchSales = async (page = 1) => {
+  // Search runs on the server across ALL sales, then paginates.
+  const fetchSales = async (page = 1, search = debouncedSearch) => {
+    const requestId = ++latestSalesRequest.current;
     try {
       setIsLoading(true);
-      const response = await getSales({ page, limit: 10 });
+      const response = await getSales({ page, limit: 10, search });
+      if (requestId !== latestSalesRequest.current) return;
       if (response?.data?.statusCode === 200) {
         setSales(response.data.data.sales);
         setPagination(response.data.data.pagination);
@@ -62,7 +67,7 @@ export default function SalesPage() {
     } catch (error) {
       toast.error("Failed to fetch sales");
     } finally {
-      setIsLoading(false);
+      if (requestId === latestSalesRequest.current) setIsLoading(false);
     }
   };
 
@@ -78,8 +83,19 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    Promise.all([fetchCustomers(), fetchSales(), fetchItems()]);
+    Promise.all([fetchCustomers(), fetchItems()]);
   }, []);
+
+  // Debounce the search box, then reload from page 1 (also the first load).
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchSales(1, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const handleReturnClick = async (sale: Sale) => {
     try {
@@ -179,16 +195,6 @@ export default function SalesPage() {
     setShowPaymentModal(true);
   };
 
-  const filteredSales = sales.filter((sale) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      sale.saleNumber?.toLowerCase().includes(q) ||
-      sale.customer?.name?.toLowerCase().includes(q) ||
-      sale.customer?.gstin?.toLowerCase().includes(q)
-    );
-  });
-
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -236,7 +242,7 @@ export default function SalesPage() {
           <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by sale number, customer name..."
+              placeholder="Search all sales by bill no. or customer name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 max-w-sm"
@@ -278,7 +284,7 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSales.map((sale) => (
+                  {sales.map((sale) => (
                     <tr
                       key={sale._id}
                       className="border-b transition-colors hover:bg-muted/50"
@@ -354,7 +360,7 @@ export default function SalesPage() {
                         colSpan={8}
                         className="p-4 text-center text-muted-foreground"
                       >
-                        No sales found
+                        {debouncedSearch ? `No sales match "${debouncedSearch}"` : "No sales found"}
                       </td>
                     </tr>
                   )}
@@ -367,7 +373,8 @@ export default function SalesPage() {
           {pagination.totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <p className="text-sm text-muted-foreground">
-                Showing page {pagination.currentPage} of {pagination.totalPages}
+                Showing page {pagination.currentPage} of {pagination.totalPages} (
+                {pagination.totalItems} sales)
               </p>
               <DataPagination
                 currentPage={pagination.currentPage}

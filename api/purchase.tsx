@@ -11,6 +11,7 @@ interface PurchaseFilters {
   startDate?: string;
   endDate?: string;
   vendorId?: string;
+  search?: string; // PO / invoice number or vendor name — searched on the server
 }
 
 export const createPurchase = async (data: PurchaseFormData) => {

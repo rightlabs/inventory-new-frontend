@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
@@ -58,6 +58,8 @@ export default function PurchasePage() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const latestRequest = useRef(0); // ignore out-of-order responses
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
     null
   );
@@ -83,10 +85,13 @@ export default function PurchasePage() {
     }
   };
 
-  const fetchPurchases = async (page = 1) => {
+  // Search runs on the server across ALL purchases, then paginates.
+  const fetchPurchases = async (page = 1, search = debouncedSearch) => {
+    const requestId = ++latestRequest.current;
     try {
       setIsLoading(true);
-      const response = await getPurchases({ page, limit: 10 });
+      const response = await getPurchases({ page, limit: 10, search });
+      if (requestId !== latestRequest.current) return;
 
       if (response?.data?.statusCode === 200) {
         setPurchases(response.data.data.purchases);
@@ -96,14 +101,24 @@ export default function PurchasePage() {
       toast.error("Failed to fetch purchases");
       console.error("Error fetching purchases:", error);
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequest.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchVendors();
-    fetchPurchases();
   }, []);
+
+  // Debounce the search box, then reload from page 1 (also the first load).
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchPurchases(1, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   // Status badge component
   const StatusBadge = ({ status }: { status: Purchase["status"] }) => {
@@ -137,16 +152,6 @@ export default function PurchasePage() {
       </span>
     );
   };
-
-  const filteredPurchases = purchases.filter((purchase) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      purchase.purchaseNumber?.toLowerCase().includes(q) ||
-      purchase.invoiceNo?.toLowerCase().includes(q) ||
-      purchase.vendor?.name?.toLowerCase().includes(q)
-    );
-  });
 
   return (
     <div className="space-y-8">
@@ -207,7 +212,7 @@ export default function PurchasePage() {
           <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by PO number, invoice number, vendor name..."
+              placeholder="Search all purchases by PO no., invoice no. or vendor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 max-w-sm"
@@ -255,11 +260,13 @@ export default function PurchasePage() {
                 ) : purchases.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-4 text-center">
-                      No purchases found
+                      {debouncedSearch
+                        ? `No purchases match "${debouncedSearch}"`
+                        : "No purchases found"}
                     </td>
                   </tr>
                 ) : (
-                  filteredPurchases.map((purchase) => (
+                  purchases.map((purchase) => (
                     <tr
                       key={purchase._id}
                       className="border-b transition-colors hover:bg-muted/50"
@@ -309,7 +316,8 @@ export default function PurchasePage() {
           {pagination.totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <p className="text-sm text-muted-foreground">
-                Showing page {pagination.currentPage} of {pagination.totalPages}
+                Showing page {pagination.currentPage} of {pagination.totalPages} (
+                {pagination.totalItems} purchases)
               </p>
               <DataPagination
                 currentPage={pagination.currentPage}
