@@ -153,3 +153,59 @@ export const getCashBook = async (q: CashBookQuery) => {
   const res = await API_INSTANCE.get<{ data: CashBook }>(`/mis/cash-book?${p}`);
   return res.data.data;
 };
+
+// ------------------------------------------------------- Customer Profit
+export interface ProfitFigures {
+  sales: number;
+  returns: number;
+  cost: number; // net of goods returned
+  billsCost: number;
+  returnsCost: number;
+  profit: number;
+  margin: number | null;
+}
+
+export interface CustomerProfitRow extends ProfitFigures {
+  customerId: string;
+  name: string;
+  code: string;
+  bills: number;
+  returnsCount: number;
+}
+
+export interface CustomerProfit {
+  rows: CustomerProfitRow[];
+  totals: ProfitFigures & { customers: number; bills: number };
+}
+
+export const getCustomerProfit = async (startDate: string, endDate: string) => {
+  const res = await API_INSTANCE.get<{ data: CustomerProfit }>(
+    `/mis/customer-profit?startDate=${startDate}&endDate=${endDate}`
+  );
+  return res.data.data;
+};
+
+export interface CustomerProfitEntry extends ProfitFigures {
+  type: "bill" | "sale-return" | "customer-return";
+  number: string;
+  date: string;
+  status?: string;
+  grandTotal?: number;
+}
+
+export interface CustomerProfitDetail {
+  customer: { _id: string; name: string; code: string };
+  entries: CustomerProfitEntry[];
+  totals: ProfitFigures & { bills: number };
+}
+
+export const getCustomerProfitDetail = async (
+  customerId: string,
+  startDate: string,
+  endDate: string
+) => {
+  const res = await API_INSTANCE.get<{ data: CustomerProfitDetail }>(
+    `/mis/customer-profit/${customerId}?startDate=${startDate}&endDate=${endDate}`
+  );
+  return res.data.data;
+};

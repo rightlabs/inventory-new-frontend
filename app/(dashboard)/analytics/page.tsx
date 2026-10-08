@@ -50,6 +50,7 @@ import { formatINR } from "@/utils/format";
 import { downloadCsv, rowsToCsv } from "@/utils/csv";
 import DateRangeBar, { presetRange } from "@/components/mis/DateRangeBar";
 import CashBook from "@/components/mis/CashBook";
+import CustomerProfit from "@/components/mis/CustomerProfit";
 
 const PAGE_SIZE = 10;
 
@@ -323,7 +324,8 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">MIS Reports</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Revenue, profit, money in / out and customers — filtered by date.
+            Revenue, profit, money in / out and profit per customer — filtered
+            by date.
           </p>
         </div>
         <DateRangeBar
@@ -341,6 +343,7 @@ export default function AnalyticsPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="cash">Cash Book</TabsTrigger>
+            <TabsTrigger value="customers">Customer Profit</TabsTrigger>
           </TabsList>
           {tab === "overview" && (
             <Button onClick={handleExport} disabled={exporting}>
@@ -356,6 +359,10 @@ export default function AnalyticsPage() {
 
         <TabsContent value="cash" className="mt-0">
           <CashBook startDate={startDate} endDate={endDate} />
+        </TabsContent>
+
+        <TabsContent value="customers" className="mt-0">
+          <CustomerProfit startDate={startDate} endDate={endDate} />
         </TabsContent>
 
         <TabsContent value="overview" className="mt-0 space-y-6">
