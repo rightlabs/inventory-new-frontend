@@ -56,7 +56,8 @@ const routes = [
     label: "MIS Reports",
     icon: BarChart3,
     href: "/analytics",
-    roles: ["admin"],
+    // Both roles (Oct 2026): roles differ only in editing items.
+    roles: ["admin", "sales"],
   },
 ];
 
