@@ -38,6 +38,7 @@ export default function CustomerForm({
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<CustomerFormData>({
     defaultValues: initialData
@@ -82,6 +83,12 @@ export default function CustomerForm({
       const message =
         error?.response?.data?.message ||
         (error instanceof Error ? error.message : `Failed to ${isEditMode ? "update" : "create"} customer`);
+      // Same name as another customer (server checks ignoring case and extra
+      // spaces): show it under the name field. The API layer already toasts.
+      if (error?.response?.status === 409 && /customer with this name/i.test(message)) {
+        setError("businessName", { type: "server", message }, { shouldFocus: true });
+        return;
+      }
       toast.error(message);
     }
   };
@@ -98,12 +105,14 @@ export default function CustomerForm({
             <Input
               {...register("businessName", {
                 required: "Business name is required",
+                validate: (v) => v.trim() !== "" || "Business name is required",
               })}
+              aria-invalid={!!errors.businessName}
               placeholder="Enter business name"
               className={errors.businessName ? "border-red-500" : ""}
             />
             {errors.businessName && (
-              <p className="text-red-500 text-xs mt-1">
+              <p className="text-red-500 text-xs mt-1" role="alert" data-testid="name-error">
                 {errors.businessName.message}
               </p>
             )}
