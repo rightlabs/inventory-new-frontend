@@ -96,13 +96,18 @@ export const addCustomerAdvance = async (
   }
 };
 
-export interface AccountPaymentData {
+export interface AccountPaymentPart {
   amount: number;
   mode: "cash" | "cheque" | "online";
   reference?: string;
+}
+
+// Single payment ({ amount, mode, reference }) or one payment split across
+// modes ({ parts: [...] }) — each part becomes its own ledger line.
+export type AccountPaymentData = (AccountPaymentPart | { parts: AccountPaymentPart[] }) & {
   notes?: string;
   date?: string; // YYYY-MM-DD; default today; future rejected by the server
-}
+};
 
 export const recordCustomerPayment = async (
   customerId: string,
