@@ -341,6 +341,16 @@ export default function SalesForm({
       return;
     }
 
+    // A line with a quantity and a price must have an amount (server checks too).
+    const zeroLine = selectedItems.find((item) => {
+      const qty = Number(item.weight) > 0 ? Number(item.weight) : Number(item.quantity) || 0;
+      return qty > 0 && Number(item.sellingPrice) > 0 && !(Number(item.amount) > 0);
+    });
+    if (zeroLine) {
+      toast.error(`${zeroLine.name}: amount is ₹0. Please re-enter the quantity.`);
+      return;
+    }
+
     const calculations = calculateTotals();
 
     // Validate split payments: total paid must not exceed grand total.

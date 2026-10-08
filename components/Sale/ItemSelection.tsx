@@ -166,6 +166,7 @@ export default function ItemSelection({
 
     const initialQuantity = product.unitType === "weight" ? undefined : 1;
     const initialWeight = product.unitType === "weight" ? 0 : undefined;
+    const rate = round2(product.purchaseRate || 0);
 
     onItemChange(index, {
       ...item,
@@ -176,13 +177,15 @@ export default function ItemSelection({
       gauge: product.gauge || "",
       subCategory: product.subCategory || "",
       specification: product.specification || "",
-      rate: round2(product.purchaseRate || 0),
+      rate,
       margin: 0,
-      sellingPrice: round2(product.purchaseRate || 0),
+      sellingPrice: rate,
       quantity: initialQuantity,
       weight: initialWeight,
       pieces: initialQuantity,
-      amount: 0,
+      // Pieces items start at qty 1, so the amount must be 1 × price right
+      // away — it used to stay ₹0 until the qty was retyped (₹0 sales).
+      amount: calculatePrices(rate, 0, initialQuantity || 0).amount,
     });
   };
 
