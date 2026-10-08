@@ -25,12 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit2, Package, History, RotateCcw } from "lucide-react";
+import { Edit2, Package, History, RotateCcw, List } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItems, createItem, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
 import { useUser } from "@/contexts/userContext";
 import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
+import ReturnsListModal from "@/components/ReturnsListModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import {
   BaseItem,
@@ -111,6 +112,7 @@ export default function ItemsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [returnsListOpen, setReturnsListOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("pipes");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -673,6 +675,9 @@ export default function ItemsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setReturnsListOpen(true)}>
+            <List className="mr-2 h-4 w-4" /> Returns
+          </Button>
           <Button
             variant="outline"
             className="border-primary text-primary hover:bg-primary/10"
@@ -716,8 +721,11 @@ export default function ItemsPage() {
       <ReturnInventoryModal
         open={returnOpen}
         onOpenChange={setReturnOpen}
-        items={items}
         onSuccess={fetchItems}
+      />
+      <ReturnsListModal
+        open={returnsListOpen}
+        onOpenChange={setReturnsListOpen}
       />
 
       {/* Search and Filter Section */}
