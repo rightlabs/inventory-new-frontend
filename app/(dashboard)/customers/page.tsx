@@ -143,7 +143,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -177,7 +177,7 @@ export default function CustomersPage() {
       {/* Customers List Section */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-wrap justify-between items-start gap-3">
             <div>
               <CardTitle className="text-xl font-semibold">
                 Customer List
@@ -207,7 +207,7 @@ export default function CustomersPage() {
           ) : (
             <>
             <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
-              <table className="w-full">
+              <table className="w-full sticky-actions">
                 <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -324,7 +324,7 @@ export default function CustomersPage() {
               </table>
             </div>
             {pagination.totalPages > 1 && (
-              <div className="flex justify-between items-center mt-4">
+              <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
                 <p className="text-sm text-muted-foreground">
                   Showing page {pagination.currentPage} of{" "}
                   {pagination.totalPages} ({pagination.totalItems} customers)

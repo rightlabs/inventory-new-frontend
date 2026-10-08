@@ -338,6 +338,7 @@ export default function ReturnInventoryModal({
                   <label className="text-xs font-medium mb-1 block">Item</label>
                   <SearchSelect
                     testId={`return-item-${i}`}
+                    hintInTrigger={false}
                     options={itemOptions}
                     value={line.itemId}
                     onChange={(v) => handleItemChange(i, v)}
@@ -383,8 +384,9 @@ export default function ReturnInventoryModal({
                 )}
                 <div className="col-span-6 md:col-span-3">
                   <label className="text-xs font-medium mb-1 block whitespace-nowrap">
-                    {customer ? "Price" : "Return Price"} (₹
-                    {item ? (isWeight ? "/kg" : "/pc") : ""})
+                    {/* Short label in both modes so it never wraps or spills
+                        into the next column (was "Return Price (₹/kg)"). */}
+                    Price (₹{item ? (isWeight ? "/kg" : "/pc") : ""})
                   </label>
                   <Input
                     inputMode="decimal"

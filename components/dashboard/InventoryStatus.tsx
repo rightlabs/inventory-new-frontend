@@ -7,8 +7,8 @@ interface InventoryStatusProps {
 
 export function InventoryStatus({ stats }: InventoryStatusProps) {
   return (
-    <div className="flex w-full justify-between gap-5">
-      <div className="bg-[#F3E8FF] rounded-lg p-4 w-1/3">
+    <div className="flex w-full flex-col md:flex-row justify-between gap-5">
+      <div className="bg-[#F3E8FF] rounded-lg p-4 w-full md:w-1/3 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-purple-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -20,10 +20,10 @@ export function InventoryStatus({ stats }: InventoryStatusProps) {
           </div>
           <span className="text-sm text-purple-700">Total Items</span>
         </div>
-        <p className="text-4xl font-bold text-purple-900">{stats.totalItems}</p>
+        <p className="text-3xl xl:text-4xl font-bold [overflow-wrap:anywhere] text-purple-900">{stats.totalItems}</p>
       </div>
 
-      <div className="bg-[#FEE2E2] rounded-lg p-4 w-1/3">
+      <div className="bg-[#FEE2E2] rounded-lg p-4 w-full md:w-1/3 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-red-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -35,10 +35,10 @@ export function InventoryStatus({ stats }: InventoryStatusProps) {
           </div>
           <span className="text-sm text-red-700">Low Stock</span>
         </div>
-        <p className="text-4xl font-bold text-red-900">{stats.lowStockItems}</p>
+        <p className="text-3xl xl:text-4xl font-bold [overflow-wrap:anywhere] text-red-900">{stats.lowStockItems}</p>
       </div>
 
-      <div className="bg-[#DBEAFE] rounded-lg p-4 w-1/3">
+      <div className="bg-[#DBEAFE] rounded-lg p-4 w-full md:w-1/3 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-4 w-4 text-blue-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -54,7 +54,7 @@ export function InventoryStatus({ stats }: InventoryStatusProps) {
           </div>
           <span className="text-sm text-blue-700">Total Value</span>
         </div>
-        <p className="text-4xl font-bold text-blue-900">
+        <p className="text-3xl xl:text-4xl font-bold [overflow-wrap:anywhere] text-blue-900">
           {formatINR(
             stats.valueByCategory.reduce(
               (acc, cat) => acc + cat.totalValue,

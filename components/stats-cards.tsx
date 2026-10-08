@@ -24,7 +24,7 @@ function StatsCard({
         <div className="space-y-2">
           <p className="text-base text-gray-500">{title}</p>
           <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2">
               <h3 className="text-3xl font-semibold text-gray-900">
                 {isNegative ? "-" : ""}₹
                 {Math.abs(amount).toLocaleString("en-IN", {
@@ -70,7 +70,8 @@ function StatsCard({
 
 export function StatsCards({ metrics }: { metrics: DashboardMetrics }) {
   return (
-    <div className="grid gap-6 grid-cols-3">
+    // 3 across from xl (1280px); stacked below so big amounts never overflow.
+    <div className="grid gap-4 xl:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
       <StatsCard
         title="Total Sales"
         amount={metrics.totalSales.total}

@@ -46,7 +46,7 @@ import {
   CashSplit,
 } from "@/api/mis";
 import { getSales } from "@/api/sale";
-import { formatINR } from "@/utils/format";
+import { formatAxisINR, formatINR } from "@/utils/format";
 import { downloadCsv, rowsToCsv } from "@/utils/csv";
 import DateRangeBar, { presetRange } from "@/components/mis/DateRangeBar";
 import CashBook from "@/components/mis/CashBook";
@@ -367,7 +367,7 @@ export default function AnalyticsPage() {
 
         <TabsContent value="overview" className="mt-0 space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {summaryLoading && !summary && (
           <Card>
             <CardContent className="pt-6 text-muted-foreground">
@@ -483,7 +483,7 @@ export default function AnalyticsPage() {
                 <LineChart data={summary?.dailySeries || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} />
-                  <YAxis />
+                  <YAxis width={88} tickFormatter={formatAxisINR} tick={{ fontSize: 12 }} />
                   <Tooltip
                     formatter={(value: number) => formatINR(value)}
                   />
@@ -576,7 +576,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between mt-4 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-4 text-sm">
             <span className="text-muted-foreground">
               Showing {(page - 1) * PAGE_SIZE + 1}–
               {Math.min(page * PAGE_SIZE, totalItems)} of{" "}

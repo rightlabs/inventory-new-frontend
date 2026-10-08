@@ -99,3 +99,31 @@ input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 30px rgb(32, 32, 32) inset !important;
   -webkit-text-fill-color: #fff !important;
 }
+
+/* Lists below 1280px: the Actions column (last column) stays visible at the
+   right edge while the table scrolls sideways inside its own box. Desktop
+   (>= 1280px) is unchanged. */
+@media (max-width: 1279.98px) {
+  table.sticky-actions th:last-child,
+  table.sticky-actions td:last-child:not([colspan]) {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    box-shadow: inset 1px 0 0 hsl(var(--border));
+  }
+  table.sticky-actions thead th:last-child {
+    z-index: 30;
+    background: hsl(var(--muted));
+  }
+}
+
+/* Wide lists (inventory, purchases) between 1024 and 1400px: 12px cell side
+   padding instead of 16px, so the table fits its box at 1280 (incl. the
+   ~17px scrollbar on Windows). 1440 is unchanged. */
+@media (max-width: 1399.98px) {
+  table.tight-cells th,
+  table.tight-cells td {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

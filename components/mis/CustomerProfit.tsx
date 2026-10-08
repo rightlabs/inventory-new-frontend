@@ -129,7 +129,7 @@ export default function CustomerProfit({
       {/* All-customer totals — equal to MIS gross profit for the range */}
       <Card>
         <CardContent className="pt-5 pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-sm">
             <div>
               <div className="text-muted-foreground">Customers</div>
               <div className="text-lg font-semibold">{t ? t.customers : "—"}</div>

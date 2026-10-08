@@ -72,7 +72,7 @@ export default function DataPagination({
             href="#"
             size="sm"
             aria-disabled={isFirst || disabled}
-            className={cn("cursor-pointer", (isFirst || disabled) && disabledCls)}
+            className={cn("cursor-pointer [&>span]:hidden sm:[&>span]:inline", (isFirst || disabled) && disabledCls)}
             onClick={(e) => {
               e.preventDefault();
               go(currentPage - 1);
@@ -82,11 +82,11 @@ export default function DataPagination({
 
         {pages.map((p, idx) =>
           p === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${idx}`}>
+            <PaginationItem key={`ellipsis-${idx}`} className="hidden sm:block">
               <PaginationEllipsis />
             </PaginationItem>
           ) : (
-            <PaginationItem key={p}>
+            <PaginationItem key={p} className={p === currentPage ? undefined : "hidden sm:block"}>
               <PaginationLink
                 href="#"
                 isActive={p === currentPage}
@@ -108,7 +108,7 @@ export default function DataPagination({
             href="#"
             size="sm"
             aria-disabled={isLast || disabled}
-            className={cn("cursor-pointer", (isLast || disabled) && disabledCls)}
+            className={cn("cursor-pointer [&>span]:hidden sm:[&>span]:inline", (isLast || disabled) && disabledCls)}
             onClick={(e) => {
               e.preventDefault();
               go(currentPage + 1);

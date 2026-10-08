@@ -602,7 +602,7 @@ export default function SalesForm({
 
           <div className="grid gap-6 py-4">
             {/* Customer Selection */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">Customer*</label>
                 <div className="flex gap-2">
@@ -676,7 +676,7 @@ export default function SalesForm({
             </div>
 
             {/* Basic Details */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Delivery Address</label>
                 <Input
@@ -756,7 +756,7 @@ export default function SalesForm({
             {/* Payment Section */}
             {selectedItems.length > 0 && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium mb-1 block">
                       Discount {formData.discountType === "percent" ? "(%)" : "(₹)"}

@@ -27,6 +27,12 @@ export const formatINR = (amount: Numeric, fractionDigits = 2) =>
     maximumFractionDigits: fractionDigits,
   }).format(clean(amount));
 
+// Chart axis label: whole rupees with Indian commas — 3500000 -> "₹35,00,000", -750000 -> "-₹7,50,000".
+export const formatAxisINR = (n: Numeric) => {
+  const v = Math.round(clean(n));
+  return (v < 0 ? "-₹" : "₹") + Math.abs(v).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+};
+
 // Plain number with Indian commas and a fixed number of decimals (default 2).
 export const formatIndianNumber = (n: Numeric, fractionDigits = 2) =>
   clean(n).toLocaleString("en-IN", {

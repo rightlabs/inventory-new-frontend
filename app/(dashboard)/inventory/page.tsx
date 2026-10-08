@@ -245,7 +245,7 @@ export default function ItemsPage() {
       return <EmptyState message={getEmptyStateMessage()} />;
     }
     return (
-      <table className="w-full">
+      <table className="w-full sticky-actions tight-cells">
         <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -347,7 +347,7 @@ export default function ItemsPage() {
       return <EmptyState message={getEmptyStateMessage()} />;
     }
     return (
-      <table className="w-full">
+      <table className="w-full sticky-actions tight-cells">
         <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -452,7 +452,7 @@ export default function ItemsPage() {
       return <EmptyState message={getEmptyStateMessage()} />;
     }
     return (
-      <table className="w-full">
+      <table className="w-full sticky-actions tight-cells">
         <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
           <tr className="border-b bg-muted/50">
             <th className="h-12 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
@@ -667,14 +667,14 @@ export default function ItemsPage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your inventory items and stock levels
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => setReturnsListOpen(true)}>
             <List className="mr-2 h-4 w-4" /> Returns
           </Button>

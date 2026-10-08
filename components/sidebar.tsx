@@ -61,7 +61,8 @@ const routes = [
   },
 ];
 
-export function Sidebar() {
+// Links + logout, shared by the desktop sidebar and the mobile drawer.
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useUser();
 
@@ -71,17 +72,18 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex flex-col h-full w-64 bg-[#F8FAFC] border-r border-gray-200">
+    <>
       <div className="p-6">
         <h1 className="text-xl font-bold text-text flex items-center tracking-tight">
           Gayatri Industries
         </h1>
       </div>
-      <div className="flex-1 px-3 flex flex-col gap-y-5">
+      <div className="flex-1 px-3 flex flex-col gap-y-5 overflow-y-auto">
         {filteredRoutes.map((route) => (
           <Link
             key={route.href}
             href={route.href}
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-x-2  text-[#64748B] text-base font-medium px-3 py-3 rounded-lg hover:bg-[#F1F5F9] transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
               pathname === route.href && "bg-[#F1F5F9] text-[#7C3AED]"
@@ -101,6 +103,19 @@ export function Sidebar() {
       <div className="border-t border-gray-200 p-3">
         <LogoutButton />
       </div>
+    </>
+  );
+}
+
+// Fixed 256px sidebar from the lg breakpoint (1024px) up. Below that the
+// header shows a menu button that opens the same links in a drawer.
+export function Sidebar() {
+  return (
+    <div
+      data-testid="sidebar"
+      className="hidden lg:flex flex-col h-full w-64 shrink-0 bg-[#F8FAFC] border-r border-gray-200"
+    >
+      <SidebarNav />
     </div>
   );
 }

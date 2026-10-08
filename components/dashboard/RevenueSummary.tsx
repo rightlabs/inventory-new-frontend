@@ -9,7 +9,7 @@ import {
   Legend,
 } from "recharts";
 import { MonthlyData } from "@/types/type";
-import { formatINR } from "@/utils/format";
+import { formatAxisINR, formatINR } from "@/utils/format";
 
 interface RevenueSummaryProps {
   data: MonthlyData[];
@@ -28,8 +28,8 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
   const netProfit = totalRevenue - totalCosts;
 
   return (
-    <div className="grid grid-cols-3 gap-6 h-full">
-      <div className="col-span-2 bg-white rounded-lg p-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 h-full">
+      <div className="sm:col-span-2 bg-white rounded-lg p-4 min-w-0">
         <h4 className="text-sm font-medium text-gray-600 mb-4">
           Revenue vs Costs
         </h4>
@@ -41,7 +41,7 @@ export function RevenueSummary({ data }: RevenueSummaryProps) {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value: number) => `₹${value / 1000}K`} />
+              <YAxis width={88} tickFormatter={formatAxisINR} tick={{ fontSize: 12 }} />
               <Tooltip
                 formatter={(value: number) => [formatINR(value), ""]}
                 labelStyle={{ color: "#1E293B" }}

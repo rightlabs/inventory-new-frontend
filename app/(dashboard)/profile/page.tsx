@@ -58,7 +58,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -78,7 +78,7 @@ export default function ProfilePage() {
         <TabsContent value="profile">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex flex-wrap justify-between items-start gap-3">
                 <div>
                   <CardTitle>Personal Information</CardTitle>
                   <CardDescription>

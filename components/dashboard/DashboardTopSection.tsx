@@ -17,7 +17,7 @@ const DashboardTopSection = ({}: DashboardTopSectionProps) => {
   return (
     <div className="flex items-center justify-between w-full">
       <div className="space-y-1">
-        <h2 className="text-[1.875rem] font-semibold tracking-tight text-[#1E293B]">
+        <h2 className="text-2xl lg:text-[1.875rem] font-semibold tracking-tight text-[#1E293B]">
           Hi, {user ? `${user?.firstName} ${user?.lastName}!` : "User"}
         </h2>
         <p className="text-[#64748B]">

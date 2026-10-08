@@ -11,14 +11,49 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 import { useUser } from "@/contexts/userContext";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { SidebarNav } from "./sidebar";
 
 export function Header() {
   const { user } = useUser();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close the drawer after navigating.
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
     <header className="border-b bg-white">
-      <div className="flex h-16 items-center px-6">
+      <div className="flex h-16 items-center gap-3 px-4 lg:px-6">
+        {/* Below lg: menu button + drawer with the sidebar links */}
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden -ml-2"
+              aria-label="Open menu"
+              data-testid="menu-button"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="flex w-64 flex-col p-0 bg-[#F8FAFC] sm:max-w-[16rem]"
+            data-testid="menu-drawer"
+          >
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SidebarNav onNavigate={() => setMenuOpen(false)} />
+          </SheetContent>
+        </Sheet>
+        <span className="lg:hidden truncate text-lg font-bold tracking-tight">
+          Gayatri Industries
+        </span>
         <div className="flex items-center ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

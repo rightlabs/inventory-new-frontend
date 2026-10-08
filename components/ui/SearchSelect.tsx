@@ -33,6 +33,8 @@ interface SearchSelectProps {
   /** How many matches to render at once (type to narrow). */
   maxShown?: number;
   testId?: string;
+  /** Show the picked option's hint (e.g. code) inside the button. Default true. */
+  hintInTrigger?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ export default function SearchSelect({
   disabled,
   maxShown = 60,
   testId,
+  hintInTrigger = true,
 }: SearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -132,11 +135,11 @@ export default function SearchSelect({
             !selected && "text-muted-foreground"
           )}
         >
-          <span className="truncate">
+          <span className="min-w-0 truncate">
             {selected ? selected.label : placeholder}
           </span>
           {/* Code next to the picked name: tells apart two customers with the same name. */}
-          {selected?.hint && (
+          {hintInTrigger && selected?.hint && (
             <span className="ml-auto pl-2 text-xs text-muted-foreground shrink-0" data-testid="search-select-hint">
               {selected.hint}
             </span>
