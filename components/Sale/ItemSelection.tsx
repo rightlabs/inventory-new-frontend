@@ -62,6 +62,19 @@ const handleNumericKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
   }
 };
 
+// "Incl. freight: ₹150.00 + ₹3.00/kg (PO046)" | "Last purchase PO046: no
+// freight" | rate changed by Edit Item after that purchase.
+const costNote = (
+  b: NonNullable<ItemCost["lastPurchase"]>,
+  unit: "kg" | "pc"
+) => {
+  if (!b.isCurrent)
+    return `Rate set by Edit Item (last purchase ${b.purchaseNumber}: ${formatINR(b.landedRate)}/${unit})`;
+  if (b.logisticsPerUnit > 0)
+    return `Incl. freight: ${formatINR(b.baseRate)} + ${formatINR(b.logisticsPerUnit)}/${unit} (${b.purchaseNumber})`;
+  return `Last purchase ${b.purchaseNumber}: no freight`;
+};
+
 export default function ItemSelection({
   item,
   index,
@@ -153,7 +166,6 @@ export default function ItemSelection({
     };
   }, [item.itemId]);
   const lastBuy = cost?.lastPurchase;
-  const showLogistics = !!lastBuy && lastBuy.isCurrent && lastBuy.logisticsPerUnit > 0;
 
   // Handle category change
   const handleCategoryChange = (value: string) => {
@@ -504,7 +516,7 @@ export default function ItemSelection({
               <label className="text-sm font-medium mb-1 block">
                 Purchase Rate
                 <span className="text-xs text-muted-foreground ml-1">
-                  (Avg: {formatINR(selectedProduct.averageRate || selectedProduct.purchaseRate || 0)})
+                  (Avg incl. freight: {formatINR(selectedProduct.averageRate || selectedProduct.purchaseRate || 0)})
                 </span>
               </label>
               <Input
@@ -532,10 +544,11 @@ export default function ItemSelection({
                 onKeyDown={handleNumericKeyDown}
                 placeholder="Enter rate"
               />
-              {showLogistics && lastBuy && (
+              {/* Always one line when the item has a purchase: how the
+                  default rate (last purchase's landed rate) was built. */}
+              {lastBuy && (
                 <p className="text-xs text-muted-foreground mt-1" data-testid="cost-breakdown">
-                  Incl. logistics: {formatINR(lastBuy.baseRate)} + {formatINR(lastBuy.logisticsPerUnit)}/
-                  {selectedProduct.unitType === "weight" ? "kg" : "pc"} ({lastBuy.purchaseNumber})
+                  {costNote(lastBuy, selectedProduct.unitType === "weight" ? "kg" : "pc")}
                 </p>
               )}
             </div>
