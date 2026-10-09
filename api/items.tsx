@@ -40,18 +40,6 @@ export const getItems = async (filters: ItemFilters = {}) => {
   }
 };
 
-export const createItem = async (data: Omit<InventoryItem, "_id">) => {
-  try {
-    const res = await API_INSTANCE.post<ApiResponse<InventoryItem>>(
-      "/items",
-      data
-    );
-    return res;
-  } catch (error) {
-    throw error;
-  }
-};
-
 export const updateItem = async (
   itemId: string,
   data: Partial<InventoryItem>

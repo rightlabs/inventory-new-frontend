@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Edit2, Package, History, RotateCcw, List } from "lucide-react";
 import toast from "react-hot-toast";
-import { getItems, createItem, updateItem } from "@/api/items";
+import { getItems, updateItem } from "@/api/items";
 import ItemForm from "@/components/Forms/ItemForm";
 import { useUser } from "@/contexts/userContext";
 import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
@@ -651,22 +651,16 @@ export default function ItemsPage() {
     return false;
   });
 
+  // Edit Item only: items are created by purchases (no Add Item, Oct 2026).
   const handleSubmit = async (data: Partial<InventoryItem>) => {
+    if (!selectedItem) return;
     try {
-      if (selectedItem) {
-        await updateItem(selectedItem._id, data);
-        toast.success("Item updated successfully");
-      } else {
-        await createItem(data as Omit<InventoryItem, "_id">);
-        toast.success("Item created successfully");
-      }
+      await updateItem(selectedItem._id, data);
+      toast.success("Item updated successfully");
       setOpen(false);
       fetchItems(); // Refresh the list
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ||
-          (selectedItem ? "Failed to update item" : "Failed to create item")
-      );
+      toast.error(error?.response?.data?.message || "Failed to update item");
     }
   };
 
@@ -704,21 +698,10 @@ export default function ItemsPage() {
               if (!isOpen) setSelectedItem(null);
             }}
           >
-          {/* <DialogTrigger asChild>
-            <Button className="bg-primary">
-              <Plus className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-          </DialogTrigger> */}
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>
-                {selectedItem ? "Edit Item" : "Add New Item"}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedItem
-                  ? "Update item details"
-                  : "Enter item details and initial stock level"}
-              </DialogDescription>
+              <DialogTitle>Edit Item</DialogTitle>
+              <DialogDescription>Update item details</DialogDescription>
               {selectedItem && (
                 <PartyName
                   name={selectedItem.name}
