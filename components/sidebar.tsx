@@ -65,9 +65,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useUser();
 
-  // Filter routes based on user role
-  const filteredRoutes = routes.filter(
-    (route) => !user?.role || route.roles.includes(user.role)
+  // Filter routes based on user role. While the user is still loading (just
+  // after login), show only the links every role has, so a sales user never
+  // sees Dashboard / MIS Reports for a moment.
+  const filteredRoutes = routes.filter((route) =>
+    user?.role ? route.roles.includes(user.role) : route.roles.includes("sales")
   );
 
   return (
