@@ -26,6 +26,7 @@ import { recordVendorPayment } from "@/api/vendor";
 import BalanceAmount from "@/components/BalanceAmount";
 import { BalanceEntity, formatINR, round2 } from "@/utils/format";
 import { cn } from "@/lib/utils";
+import { PartyName } from "@/components/ModalParts";
 
 type Mode = "cash" | "cheque" | "online";
 const MODES: { value: Mode; label: string }[] = [
@@ -40,6 +41,8 @@ export interface PaymentTarget {
   _id: string;
   name: string;
   currentBalance: number;
+  /** C004 / V001 — shown as a code pill next to the name. */
+  code?: string;
 }
 
 interface RecordPaymentModalProps {
@@ -67,9 +70,9 @@ export default function RecordPaymentModal({
       <DialogContent className="sm:max-w-[460px]" data-testid="record-payment-modal">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
             {entityType === "customer" ? "Payment received from " : "Payment made to "}
-            <span className="font-medium text-foreground">{target?.name}</span>
+            <PartyName name={target?.name} code={target?.code} />
           </DialogDescription>
         </DialogHeader>
         {target && (
@@ -217,9 +220,16 @@ function PaymentForm({
       }}
       className="space-y-4"
     >
-      <div className="rounded-md bg-muted/40 px-3 py-2 text-sm flex justify-between gap-2">
-        <span className="text-muted-foreground">Current balance</span>
-        <BalanceAmount value={current} entity={entityType} className="font-medium" />
+      <div
+        className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+        data-testid="current-balance"
+      >
+        <span className="text-slate-600">Current balance</span>
+        <BalanceAmount
+          value={current}
+          entity={entityType}
+          className="font-semibold tabular-nums text-slate-900"
+        />
       </div>
 
       {!split ? (
@@ -320,7 +330,7 @@ function PaymentForm({
             data-testid="pay-total"
           >
             <span className="text-muted-foreground">Total payment</span>
-            <span className="font-semibold">{formatINR(amt)}</span>
+            <span className="font-semibold tabular-nums">{formatINR(amt)}</span>
           </div>
         </div>
       )}
@@ -336,6 +346,13 @@ function PaymentForm({
             }
           }}
         />
+        {/* Early, quiet hint; the save button still asks to confirm. */}
+        {isOld && !confirmOldDate && (
+          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-700" data-testid="old-date-hint">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {daysAgo} days ago — please check the date
+          </p>
+        )}
       </div>
 
       {!split && first.mode !== "cash" && (
@@ -357,9 +374,9 @@ function PaymentForm({
           className="rounded-md border px-3 py-2 text-sm space-y-1"
           data-testid="balance-preview"
         >
-          <div className="flex justify-between gap-2">
+          <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5">
             <span className="text-muted-foreground">Balance after payment</span>
-            <BalanceAmount value={after} entity={entityType} className="font-semibold" />
+            <BalanceAmount value={after} entity={entityType} className="font-semibold tabular-nums" />
           </div>
           {splitText && <p className="text-xs text-green-700">{splitText}</p>}
         </div>
@@ -367,11 +384,11 @@ function PaymentForm({
 
       {isOld && confirmOldDate && (
         <div
-          className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          className="flex gap-2 rounded-md border border-amber-400 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-900"
           role="alert"
           data-testid="old-date-warning"
         >
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
           <span>
             This date is {daysAgo} days ago ({formatLongDate(date)}). Is this
             correct?

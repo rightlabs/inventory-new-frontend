@@ -28,6 +28,7 @@ import { LedgerModal } from "@/components/Forms/LedgerModal";
 import DataPagination from "@/components/DataPagination";
 import { formatINR } from "@/utils/format";
 import ListStatusRow from "@/components/ListStatusRow";
+import { PartyName } from "@/components/ModalParts";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -65,6 +66,7 @@ export default function CustomersPage() {
     _id: string;
     name: string;
     currentBalance: number;
+    code?: string;
   } | null>(null);
 
   const latestRequest = useRef(0); // ignore out-of-order responses
@@ -125,8 +127,8 @@ export default function CustomersPage() {
     }
   };
 
-  const handleRecordPayment = (customerId: string, customerName: string, currentBalance: number) => {
-    setAdvanceCustomer({ _id: customerId, name: customerName, currentBalance });
+  const handleRecordPayment = (customerId: string, customerName: string, currentBalance: number, code?: string) => {
+    setAdvanceCustomer({ _id: customerId, name: customerName, currentBalance, code });
     setAdvanceOpen(true);
   };
 
@@ -322,7 +324,7 @@ export default function CustomersPage() {
                             className="group"
                             title="Record Payment"
                             onClick={() =>
-                              handleRecordPayment(customer._id, customer.name, customer.currentBalance)
+                              handleRecordPayment(customer._id, customer.name, customer.currentBalance, customer.id)
                             }
                           >
                             <Wallet className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
@@ -385,6 +387,13 @@ export default function CustomersPage() {
             <DialogDescription>
               Update customer details and business information
             </DialogDescription>
+            {editCustomerData && (
+              <PartyName
+                name={editCustomerData.businessName}
+                code={editCustomerData.id}
+                className="pt-1 text-sm"
+              />
+            )}
           </DialogHeader>
           {editCustomerData && (
             <CustomerForm
@@ -442,6 +451,8 @@ export default function CustomersPage() {
           entityName={
             customers.find((c) => c._id === selectedCustomerId)?.name
           }
+          entityCode={customers.find((c) => c._id === selectedCustomerId)?.id}
+          entityPhone={customers.find((c) => c._id === selectedCustomerId)?.phone}
         />
       )}
     </div>

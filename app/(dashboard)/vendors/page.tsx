@@ -295,6 +295,7 @@ export default function VendorsPage() {
                                 _id: vendor._id,
                                 name: vendor.name,
                                 currentBalance: vendor.currentBalance,
+                                code: vendor.id,
                               })
                             }
                           >
@@ -341,6 +342,8 @@ export default function VendorsPage() {
           entityType="vendor"
           entityId={selectedVendor}
           entityName={vendors.find((v) => v._id === selectedVendor)?.name}
+          entityCode={vendors.find((v) => v._id === selectedVendor)?.id}
+          entityPhone={vendors.find((v) => v._id === selectedVendor)?.phone}
         />
       )}
     </div>
