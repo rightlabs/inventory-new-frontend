@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Download, Plus, FileText, Pencil, Wallet, Search } from "lucide-react";
+import { Download, Plus, FileText, Pencil, Wallet, Search, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   getCustomers,
@@ -22,6 +22,7 @@ import {
 import { Customer, CustomerDetail } from "@/types/type";
 import CustomerForm from "@/components/Forms/CustomerForm";
 import RecordPaymentModal from "@/components/Forms/RecordPaymentModal";
+import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
 import BalanceAmount from "@/components/BalanceAmount";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import DataPagination from "@/components/DataPagination";
@@ -53,6 +54,9 @@ export default function CustomersPage() {
     totalPages: 1,
     totalItems: 0,
   });
+
+  // "Return goods" (no bill) for one customer
+  const [returnCustomerId, setReturnCustomerId] = useState<string | null>(null);
 
   // Record payment state
   const [advanceOpen, setAdvanceOpen] = useState(false);
@@ -311,6 +315,16 @@ export default function CustomersPage() {
                             variant="ghost"
                             size="icon"
                             className="group"
+                            title="Return goods"
+                            aria-label={`Return goods from ${customer.name}`}
+                            onClick={() => setReturnCustomerId(customer._id)}
+                          >
+                            <RotateCcw className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="group"
                             title="View Ledger"
                             onClick={() => handleViewLedger(customer._id)}
                           >
@@ -372,6 +386,19 @@ export default function CustomersPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Return goods without a bill, credited to this customer */}
+      <ReturnInventoryModal
+        open={!!returnCustomerId}
+        initialCustomerId={returnCustomerId || undefined}
+        onOpenChange={(open) => {
+          if (!open) setReturnCustomerId(null);
+        }}
+        onSuccess={() => {
+          setReturnCustomerId(null);
+          fetchCustomers(pagination.currentPage);
+        }}
+      />
 
       {/* Record Payment Dialog */}
       <RecordPaymentModal

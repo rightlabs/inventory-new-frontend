@@ -684,7 +684,7 @@ export default function ItemsPage() {
             className="border-primary text-primary hover:bg-primary/10"
             onClick={() => setReturnOpen(true)}
           >
-            <RotateCcw className="mr-2 h-4 w-4" /> Return to Inventory
+            <RotateCcw className="mr-2 h-4 w-4" /> Return Goods
           </Button>
           <Dialog
             open={open}

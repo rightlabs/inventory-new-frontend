@@ -47,6 +47,8 @@ interface ReturnInventoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  /** Customers page "Return goods": open with this customer selected. */
+  initialCustomerId?: string;
 }
 
 const sanitize = (v: string) => {
@@ -71,6 +73,7 @@ export default function ReturnInventoryModal({
   open,
   onOpenChange,
   onSuccess,
+  initialCustomerId,
 }: ReturnInventoryModalProps) {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -80,6 +83,11 @@ export default function ReturnInventoryModal({
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const savingRef = useRef(false);
+
+  // Opened for a given customer (Customers page): select them.
+  useEffect(() => {
+    if (open && initialCustomerId) setCustomerId(initialCustomerId);
+  }, [open, initialCustomerId]);
 
   // Load ALL items (any type) and all active customers when opened.
   useEffect(() => {
@@ -281,7 +289,7 @@ export default function ReturnInventoryModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl" data-testid="return-modal">
         <DialogHeader>
-          <DialogTitle>Return to Inventory</DialogTitle>
+          <DialogTitle>Return Goods (without bill)</DialogTitle>
           <DialogDescription>
             {customer
               ? `Items go back into stock and the total is credited to ${customer.name}'s account. The price is the selling price (default: what they paid last time).`
@@ -293,7 +301,7 @@ export default function ReturnInventoryModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1 block">
-                Customer (optional)
+                Customer
               </label>
               <SearchSelect
                 testId="return-customer"
@@ -304,6 +312,13 @@ export default function ReturnInventoryModal({
                 searchPlaceholder="Search customer name or code…"
                 clearLabel="No customer (stock only)"
               />
+              <p
+                className="text-xs mt-1 text-muted-foreground"
+                data-testid="return-customer-help"
+              >
+                Select the customer to credit their account. Leave empty for a
+                stock-only return.
+              </p>
               {customer && (
                 <div className="text-xs mt-1 text-muted-foreground">
                   Now:{" "}
