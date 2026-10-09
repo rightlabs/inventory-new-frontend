@@ -66,6 +66,13 @@ const emptyLine = (): ReturnLine => ({
   rateEdited: false,
 });
 
+// Pieces box mandatory: pipe/sheet, or a kg item that keeps a pieces count
+// (server flag tracksPieces from GET /items).
+const piecesRequired = (item?: InventoryItem) =>
+  !!item &&
+  item.unitType === "weight" &&
+  ((item as any).itemType === "PipeSheet" || (item as any).tracksPieces === true);
+
 const shortDate = (iso?: string) =>
   iso ? format(new Date(iso), "d MMM yyyy") : "";
 
@@ -222,10 +229,10 @@ export default function ReturnInventoryModal({
         toast.error(`Enter return price for ${item.name}`);
         return;
       }
-      // Pieces are mandatory when returning pipes/sheets so the physical piece
-      // counter stays accurate (whole pieces only). Weight-sold fittings/polish
-      // are optional and only restored when entered.
-      if ((item as any).itemType === "PipeSheet" && !(pieces > 0)) {
+      // Pieces are mandatory when the item keeps a pieces count (pipes /
+      // sheets, and kg fittings / polish that track pieces) so the counter
+      // stays accurate (whole pieces only). Otherwise optional.
+      if (piecesRequired(item) && !(pieces > 0)) {
         toast.error(`Enter the number of pieces for ${item.name}`);
         return;
       }
@@ -381,9 +388,7 @@ export default function ReturnInventoryModal({
                 {isWeight && (
                   <div className="col-span-6 md:col-span-2">
                     <label className="text-xs font-medium mb-1 block">
-                      {(item as any)?.itemType === "PipeSheet"
-                        ? "Pieces*"
-                        : "Pieces"}
+                      {piecesRequired(item) ? "Pieces*" : "Pieces"}
                     </label>
                     <Input
                       inputMode="numeric"

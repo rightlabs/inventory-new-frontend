@@ -34,8 +34,6 @@ interface ReturnItemsModalProps {
 // A line sold by kg (pipes/sheets, kg-sold fittings/polish). Its `pieces` is a
 // separate physical-piece counter. Pieces-unit lines: pieces = quantity.
 const isWeightLine = (item: SaleItem) => Number(item.weight) > 0;
-const isPipeSheetLine = (item: SaleItem) =>
-  item.itemModel === "PipeSheet" || item.type === "pipe" || item.type === "sheet";
 const soldPieces = (item: SaleItem) =>
   isWeightLine(item)
     ? Number(item.pieces || 0)
@@ -181,7 +179,9 @@ export default function ReturnItemsModal({
       const saleItem = sale.items[item.itemIndex];
       if (needsPiecesBox(item.itemIndex, saleItem)) {
         const maxPieces = getAvailablePieces(item.itemIndex, saleItem);
-        if (item.pieces === undefined && isPipeSheetLine(saleItem)) {
+        // Required for every kg line that was sold with pieces (pipes, sheets
+        // and kg-sold fittings / polish) so the pieces counter stays right.
+        if (item.pieces === undefined) {
           toast.error(`Enter the number of pieces returned for ${saleItem.name}`);
           return;
         }
@@ -190,7 +190,7 @@ export default function ReturnItemsModal({
           toast.error(`Pieces for ${saleItem.name} must be a whole number`);
           return;
         }
-        if (isPipeSheetLine(saleItem) && p < 1) {
+        if (p < 1) {
           toast.error(`Enter the number of pieces returned for ${saleItem.name}`);
           return;
         }
@@ -284,7 +284,7 @@ export default function ReturnItemsModal({
                     Return Qty
                   </th>
                   <th className="p-3 text-right text-sm font-medium w-24">
-                    Pieces
+                    Pieces*
                   </th>
                 </tr>
               </thead>
@@ -349,7 +349,7 @@ export default function ReturnItemsModal({
                                 step={1}
                                 inputMode="numeric"
                                 aria-label={`Pieces returned for ${item.name}`}
-                                placeholder={isPipeSheetLine(item) ? "Req." : "0"}
+                                placeholder="Req."
                                 value={returnPieces[index] ?? ""}
                                 onChange={(e) =>
                                   setReturnPieces((prev) => ({
@@ -358,7 +358,7 @@ export default function ReturnItemsModal({
                                   }))
                                 }
                                 className={`h-8 w-20 ml-auto text-right ${
-                                  isPipeSheetLine(item) && !returnPieces[index]
+                                  !returnPieces[index]
                                     ? "border-red-400"
                                     : ""
                                 }`}
