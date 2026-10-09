@@ -178,9 +178,28 @@ export interface InventoryReturnRecord {
   createdAt: string;
 }
 
-export const getInventoryReturns = async (limit = 100) => {
-  const res = await API_INSTANCE.get<{ data: InventoryReturnRecord[] }>(
-    `/items/return?limit=${limit}`
+export interface InventoryReturnsPage {
+  returns: InventoryReturnRecord[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    limit: number;
+  };
+}
+
+// Server-side search (return no. or customer name / code) + pages.
+export const getInventoryReturns = async ({
+  search = "",
+  page = 1,
+  limit = 20,
+  customerId,
+}: { search?: string; page?: number; limit?: number; customerId?: string } = {}) => {
+  const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) q.set("search", search);
+  if (customerId) q.set("customerId", customerId);
+  const res = await API_INSTANCE.get<{ data: InventoryReturnsPage }>(
+    `/items/return?${q}`
   );
   return res.data.data;
 };
