@@ -23,6 +23,9 @@ import toast from "react-hot-toast";
 import { cancelSale, returnSaleItems } from "@/api/sale";
 import { Sale, SaleItem } from "@/types/type";
 import { formatINR, formatQty, round2 } from "@/utils/format";
+import { EmptyState } from "@/components/mis/ui";
+import { Fact, FactStrip, longDate } from "@/components/ModalParts";
+import { PackageCheck } from "lucide-react";
 
 interface ReturnItemsModalProps {
   open: boolean;
@@ -244,31 +247,28 @@ export default function ReturnItemsModal({
   );
 
   return (
-    <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
+    <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto overflow-x-hidden grid-cols-[minmax(0,1fr)]">
+      <DialogHeader className="pr-6">
         <DialogTitle>
-          Return / Cancel — {sale.saleNumber}
+          Return / Cancel — <span className="font-mono tracking-tight">{sale.saleNumber}</span>
         </DialogTitle>
       </DialogHeader>
 
       <div className="space-y-4 py-4">
         {/* Sale Info */}
-        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg text-sm">
-          <div>
-            <span className="text-muted-foreground">Customer:</span>{" "}
-            <span className="font-medium">{sale.customer.name}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Total:</span>{" "}
-            <span className="font-medium">
+        <FactStrip>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+            <Fact label="Customer">{sale.customer.name}</Fact>
+            {sale.date && <Fact label="Bill date">{longDate(sale.date)}</Fact>}
+            <Fact label="Total">
               {formatINR(sale.originalGrandTotal || sale.grandTotal)}
-            </span>
+            </Fact>
           </div>
-        </div>
+        </FactStrip>
 
         {/* Items List */}
         {hasReturnableItems ? (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
@@ -308,8 +308,8 @@ export default function ReturnItemsModal({
                           }
                         />
                       </td>
-                      <td className="p-3 text-sm">{item.name}</td>
-                      <td className="p-3 text-sm text-right whitespace-nowrap">
+                      <td className="p-3 text-sm font-medium min-w-[120px] [overflow-wrap:anywhere]">{item.name}</td>
+                      <td className="p-3 text-sm text-right whitespace-nowrap tabular-nums">
                         {formatQty(originalQty, unit)}
                         {isWeightLine(item) && soldPieces(item) > 0 && (
                           <div className="text-xs text-muted-foreground">
@@ -317,7 +317,7 @@ export default function ReturnItemsModal({
                           </div>
                         )}
                       </td>
-                      <td className="p-3 text-sm text-right whitespace-nowrap">
+                      <td className="p-3 text-sm text-right whitespace-nowrap tabular-nums font-medium">
                         {formatQty(available, unit)}
                         {piecesBox && (
                           <div className="text-xs text-muted-foreground">
@@ -380,8 +380,13 @@ export default function ReturnItemsModal({
             </table>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            All items have already been returned.
+          <div className="rounded-md border">
+            <EmptyState
+              size="sm"
+              icon={PackageCheck}
+              title="All items have already been returned."
+              description="Nothing is left to return on this bill."
+            />
           </div>
         )}
 
@@ -399,10 +404,10 @@ export default function ReturnItemsModal({
 
         {/* Return Summary */}
         {Object.values(selectedItems).some(Boolean) && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between font-medium">
+          <div className="bg-rose-50/60 border border-rose-200 p-4 rounded-lg">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
               <span>Return Amount</span>
-              <span className="text-red-600">
+              <span className="text-lg text-red-700 tabular-nums" data-testid="return-amount">
                 {formatINR(calculateReturnTotal())}
               </span>
             </div>
@@ -411,7 +416,7 @@ export default function ReturnItemsModal({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-between mt-6">
+      <div className="flex flex-wrap justify-between gap-2 mt-6">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -438,7 +443,7 @@ export default function ReturnItemsModal({
           </AlertDialogContent>
         </AlertDialog>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>

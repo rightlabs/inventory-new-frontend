@@ -17,6 +17,8 @@ import {
 import { addPayment, addSalePayment } from "@/api/transaction";
 import toast from "react-hot-toast";
 import { formatINR } from "@/utils/format";
+import { CodeBadge } from "@/components/mis/ui";
+import { Fact, FactStrip, longDate } from "@/components/ModalParts";
 
 // Interfaces
 interface Sale {
@@ -24,6 +26,8 @@ interface Sale {
   saleNumber: string;
   grandTotal: number;
   balanceAmount: number;
+  date?: string | Date;
+  customer?: { name?: string };
 }
 
 interface Purchase {
@@ -31,6 +35,11 @@ interface Purchase {
   purchaseNumber: string;
   grandTotal: number;
   balanceAmount: number;
+  date?: string | Date;
+  vendor?: { name?: string };
+  freight?: number;
+  freightPaidBy?: "shop" | "vendor";
+  freightPayment?: { mode?: string; transporter?: string };
 }
 
 interface PaymentModalProps {
@@ -134,19 +143,38 @@ export default function PaymentModal({
       </DialogHeader>
 
       <div className="grid gap-4 py-4">
-        <div>
-          <span className="block text-sm font-medium mb-2">
-            {documentType === "sale" ? "Sale Order" : "Purchase Order"}
-          </span>
-          <span className="text-sm">{documentNumber}</span>
-        </div>
-
-        <div>
-          <span className="block text-sm font-medium mb-2">Balance Amount</span>
-          <span className="text-sm">
-            {formatINR(document.balanceAmount)}
-          </span>
-        </div>
+        <FactStrip>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Fact label={documentType === "sale" ? "Sale Order" : "Purchase Order"}>
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {documentNumber && <CodeBadge code={documentNumber} />}
+                {document.date && (
+                  <span className="text-xs font-normal text-slate-500">
+                    {longDate(document.date)}
+                  </span>
+                )}
+              </span>
+            </Fact>
+            {(sale?.customer?.name || purchase?.vendor?.name) && (
+              <Fact label={sale ? "Customer" : "Vendor"}>
+                {sale?.customer?.name || purchase?.vendor?.name}
+              </Fact>
+            )}
+            <Fact label="Bill Total">{formatINR(document.grandTotal)}</Fact>
+            <Fact label="Balance Amount" testId="payment-balance">
+              <span className="text-base font-semibold text-red-700">
+                {formatINR(document.balanceAmount)}
+              </span>
+            </Fact>
+          </div>
+          {Number(purchase?.freight) > 0 && (
+            <p className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-600">
+              {purchase?.freightPaidBy === "shop"
+                ? `Freight ${formatINR(purchase?.freight || 0)} paid to ${purchase?.freightPayment?.transporter || "transporter"} — not on this bill`
+                : `Includes freight ${formatINR(purchase?.freight || 0)} (vendor bill)`}
+            </p>
+          )}
+        </FactStrip>
 
         <div>
           <div className="flex items-center justify-between mb-1">
