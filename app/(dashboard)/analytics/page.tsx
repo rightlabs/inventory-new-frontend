@@ -38,6 +38,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/contexts/userContext";
 import {
   getMisSummary,
   getMisSalesExport,
@@ -138,7 +140,27 @@ interface SaleRow {
   paymentStatus: string;
 }
 
+// MIS shows profit: admin only (Oct 2026 owner rule). A sales user who opens
+// /analytics by URL goes to /sales; the backend /mis routes also return 401.
 export default function AnalyticsPage() {
+  const router = useRouter();
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user && user.role !== "admin") router.replace("/sales");
+  }, [user, router]);
+
+  if (user?.role !== "admin")
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    );
+
+  return <AnalyticsContent />;
+}
+
+function AnalyticsContent() {
   // Default range: last 30 days (incl. today) — same as the "30 days" button.
   const [startDate, setStartDate] = useState(() => presetRange(30).start);
   const [endDate, setEndDate] = useState(() => presetRange(30).end);
