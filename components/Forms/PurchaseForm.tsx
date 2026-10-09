@@ -916,11 +916,11 @@ const PurchaseModal = ({
                             {renderTableCell(item)}
                           </TableRow>
                         ))}
-                        <TableRow className="font-medium">
+                        <TableRow className="bg-slate-50 font-semibold text-slate-900 hover:bg-slate-50">
                           <TableCell colSpan={renderTableColumns().length - 1}>
                             Total
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right tabular-nums whitespace-nowrap">
                             {formatINR(processedData.totalAmount)}
                           </TableCell>
                         </TableRow>
@@ -1127,6 +1127,10 @@ const PurchaseModal = ({
           transactions={transactions}
           open={showLedger}
           onClose={() => setShowLedger(false)}
+          entityName={vendors.find((v) => v._id === formData.vendorId)?.name}
+          entityCode={vendors.find((v) => v._id === formData.vendorId)?.id}
+          entityPhone={vendors.find((v) => v._id === formData.vendorId)?.phone}
+          partyKind="vendor"
         />
       )}
     </DialogContent>

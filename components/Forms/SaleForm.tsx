@@ -28,6 +28,8 @@ import BalanceAmount from "@/components/BalanceAmount";
 import ItemSelection from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
 import { formatINR, formatQty, round2 } from "@/utils/format";
+import { Fact, FactStrip, PartyName, longDate } from "@/components/ModalParts";
+import { cn } from "@/lib/utils";
 
 interface QuantityError {
   hasError: boolean;
@@ -470,16 +472,16 @@ export default function SalesForm({
 
           <div className="space-y-4 py-4">
             {/* Customer & Date Info */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-              <div>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50/80 border border-slate-200 rounded-lg">
+              <div className="min-w-0">
                 <span className="text-xs text-muted-foreground">Customer</span>
-                <p className="font-medium">{selectedCustomer?.name}</p>
+                <p className="mt-0.5">
+                  <PartyName name={selectedCustomer?.name} code={selectedCustomer?.id} />
+                </p>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground">Date</span>
-                <p className="font-medium">
-                  {formData.date.toLocaleDateString("en-IN")}
-                </p>
+                <p className="font-medium">{longDate(formData.date)}</p>
               </div>
               {formData.deliveryAddress && (
                 <div>
@@ -512,13 +514,13 @@ export default function SalesForm({
                     <tr key={i} className="border-b">
                       <td className="p-3 text-sm">{i + 1}</td>
                       <td className="p-3 text-sm">{item.name}</td>
-                      <td className="p-3 text-sm text-right">
+                      <td className="p-3 text-sm text-right tabular-nums">
                         {formatQty(item.weight || item.quantity || 0)}
                       </td>
-                      <td className="p-3 text-sm text-right">
+                      <td className="p-3 text-sm text-right tabular-nums whitespace-nowrap">
                         {formatINR(item.sellingPrice)}
                       </td>
-                      <td className="p-3 text-sm text-right">
+                      <td className="p-3 text-sm text-right tabular-nums whitespace-nowrap font-medium">
                         {formatINR(item.amount)}
                       </td>
                     </tr>
@@ -528,7 +530,7 @@ export default function SalesForm({
             </div>
 
             {/* Totals Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="bg-slate-50/80 border border-slate-200 p-4 rounded-lg space-y-2 tabular-nums">
               <div className="flex justify-between">
                 <span className="text-sm">Subtotal</span>
                 <span>{formatINR(calculateTotals().subtotal)}</span>
@@ -550,9 +552,9 @@ export default function SalesForm({
                   <span>+{formatINR(calculateTotals().additionalCharges)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-medium pt-2 border-t">
+              <div className="flex justify-between items-baseline font-semibold pt-2 border-t border-slate-300 text-slate-900">
                 <span>Grand Total</span>
-                <span className="text-lg">{formatINR(calculateTotals().grandTotal)}</span>
+                <span className="text-xl">{formatINR(calculateTotals().grandTotal)}</span>
               </div>
               {paymentRows.filter((p) => Number(p.amount) > 0).length > 0 && (
                 <div className="pt-2 border-t space-y-1">
@@ -639,17 +641,18 @@ export default function SalesForm({
                   </Dialog>
                 </div>
                 {selectedCustomer && (
-                  <div className="text-sm bg-muted/50 p-2 rounded">
-                    <p>
-                      Credit Limit: {formatINR(selectedCustomer?.creditLimit || 0)}
-                    </p>
-                    <p>
-                      Balance:{" "}
-                      <BalanceAmount
-                        value={selectedCustomer?.currentBalance || 0}
-                        entity="customer"
-                      />
-                    </p>
+                  <FactStrip className="space-y-2" >
+                    <div className="grid grid-cols-2 gap-3">
+                      <Fact label="Credit Limit">
+                        {formatINR(selectedCustomer?.creditLimit || 0)}
+                      </Fact>
+                      <Fact label="Balance">
+                        <BalanceAmount
+                          value={selectedCustomer?.currentBalance || 0}
+                          entity="customer"
+                        />
+                      </Fact>
+                    </div>
                     <Button
                       variant="link"
                       size="sm"
@@ -658,7 +661,7 @@ export default function SalesForm({
                     >
                       View Ledger
                     </Button>
-                  </div>
+                  </FactStrip>
                 )}
               </div>
 
@@ -914,7 +917,7 @@ export default function SalesForm({
                 </div>
 
                 {/* Summary */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="bg-slate-50/80 border border-slate-200 p-4 rounded-lg space-y-2 tabular-nums">
                   <div className="flex justify-between">
                     <span className="text-sm">Subtotal</span>
                     <span>{formatINR(calculateTotals().subtotal)}</span>
@@ -936,9 +939,9 @@ export default function SalesForm({
                       <span>+{formatINR(calculateTotals().additionalCharges)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-medium pt-2 border-t">
+                  <div className="flex justify-between items-baseline font-semibold pt-2 border-t border-slate-300 text-slate-900">
                     <span>Grand Total</span>
-                    <span className="text-lg">{formatINR(calculateTotals().grandTotal)}</span>
+                    <span className="text-xl">{formatINR(calculateTotals().grandTotal)}</span>
                   </div>
                   {calculateTotals().amountPaid > 0 && (
                     <>
@@ -964,13 +967,21 @@ export default function SalesForm({
                 </div>
 
                 {selectedCustomer && (
-                  <Alert>
+                  <Alert
+                    data-testid="available-credit"
+                    className={cn(
+                      selectedCustomer.creditLimit - selectedCustomer.currentBalance < 0 &&
+                        "border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-700"
+                    )}
+                  >
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Available Credit:{" "}
-                      {formatINR(
-                        selectedCustomer.creditLimit - selectedCustomer.currentBalance
-                      )}
+                      <span className="font-semibold tabular-nums">
+                        {formatINR(
+                          selectedCustomer.creditLimit - selectedCustomer.currentBalance
+                        )}
+                      </span>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -997,6 +1008,10 @@ export default function SalesForm({
               transactions={transactions}
               open={showLedger}
               onClose={() => setShowLedger(false)}
+              entityName={selectedCustomer?.name}
+              entityCode={selectedCustomer?.id}
+              entityPhone={selectedCustomer?.phone}
+              partyKind="customer"
             />
           )}
         </>

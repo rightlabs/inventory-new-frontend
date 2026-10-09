@@ -12,7 +12,7 @@ const SummaryPurchase: React.FC<{
   if (!calculations) return null;
 
   return (
-    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+    <div className="bg-slate-50/80 border border-slate-200 p-4 rounded-lg space-y-2 tabular-nums">
       <div className="flex justify-between">
         <span className="text-sm">Total Amount</span>
         <span>{formatCurrency(processedData.totalAmount)}</span>
@@ -30,7 +30,7 @@ const SummaryPurchase: React.FC<{
               ? "Freight (paid to transporter — not on vendor bill)"
               : "Freight (on vendor bill)"}
           </span>
-          <span className={formData.freightPaidBy === "shop" ? "text-muted-foreground" : ""}>
+          <span className={formData.freightPaidBy === "shop" ? "text-amber-700 whitespace-nowrap" : "whitespace-nowrap"}>
             {formData.freightPaidBy === "shop" ? "(" : ""}
             {formatCurrency(Number(formData.freight))}
             {formData.freightPaidBy === "shop" ? ")" : ""}
@@ -43,9 +43,9 @@ const SummaryPurchase: React.FC<{
           <span>{formatCurrency(Number(formData.tcs))}</span>
         </div>
       )}
-      <div className="flex justify-between font-medium pt-2 border-t">
+      <div className="flex justify-between items-baseline font-semibold pt-2 border-t border-slate-300 text-slate-900">
         <span>Grand Total</span>
-        <span>{formatCurrency(calculations.grandTotal)}</span>
+        <span className="text-xl">{formatCurrency(calculations.grandTotal)}</span>
       </div>
       {formData.amountPaid > 0 && (
         <>
