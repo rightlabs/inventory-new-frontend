@@ -9,8 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getPurchaseHistory } from "@/api/items";
-import { format } from "date-fns";
+import { History } from "lucide-react";
 import { formatINR, formatQty } from "@/utils/format";
+import { CodeBadge, DateCell, EmptyState } from "@/components/mis/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PurchaseHistoryItem {
   _id: string;
@@ -70,24 +72,24 @@ export default function PriceHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[820px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[820px] max-h-[80vh] overflow-hidden flex flex-col min-w-0">
         <DialogHeader>
           <DialogTitle>Price History</DialogTitle>
-          <DialogDescription>{itemName}</DialogDescription>
+          <DialogDescription className="font-medium text-slate-800 [overflow-wrap:anywhere]">{itemName}</DialogDescription>
         </DialogHeader>
 
         {/* Summary Section */}
         {itemInfo && (
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg mb-4">
+          <div className="grid grid-cols-2 gap-4 p-4 border border-slate-200 bg-slate-50/80 rounded-lg mb-4 shrink-0">
             <div>
               <p className="text-sm text-muted-foreground">Current Rate</p>
-              <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold tabular-nums">
                 {formatINR(itemInfo.currentRate || 0)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Average Rate</p>
-              <p className="text-lg font-semibold text-primary">
+              <p className="text-lg font-semibold text-primary tabular-nums">
                 {formatINR(itemInfo.averageRate || 0)}
               </p>
             </div>
@@ -95,22 +97,25 @@ export default function PriceHistoryModal({
         )}
 
         {/* History Table */}
-        <div className="flex-1 overflow-auto">
+        {/* One scroller for both directions so the header row stays put. */}
+        <div className="flex-1 min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              Loading...
+            <div className="space-y-3 p-4" aria-label="Loading price history">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
             </div>
           ) : history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <p>No purchase history found</p>
-              <p className="text-sm">
-                Price history will appear here after purchases are made
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              icon={History}
+              title="No purchase history found"
+              description="Price history will appear here after purchases are made"
+            />
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div>
               <table className="w-full" data-testid="price-history-table">
-                <thead>
+                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left align-middle text-sm font-medium text-muted-foreground">
                       Date
@@ -145,27 +150,27 @@ export default function PriceHistoryModal({
                       className="border-b transition-colors hover:bg-muted/50"
                     >
                       <td className="p-3 align-middle text-sm">
-                        {format(new Date(item.date), "dd/MM/yyyy")}
+                        <DateCell date={item.date} />
                       </td>
                       <td className="p-3 align-middle text-sm">
-                        {item.documentNumber}
+                        {item.documentNumber ? <CodeBadge code={item.documentNumber} /> : "–"}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right">
+                      <td className="p-3 align-middle text-sm text-right tabular-nums">
                         {formatQty(item.quantity)}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right">
+                      <td className="p-3 align-middle text-sm text-right tabular-nums whitespace-nowrap">
                         {formatINR(item.baseRate ?? item.rate)}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right text-muted-foreground">
+                      <td className={`p-3 align-middle text-sm text-right tabular-nums whitespace-nowrap ${item.discountPerUnit ? "text-emerald-700" : "text-muted-foreground"}`}>
                         {item.discountPerUnit ? `−${formatINR(item.discountPerUnit)}` : "–"}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right text-muted-foreground">
+                      <td className={`p-3 align-middle text-sm text-right tabular-nums whitespace-nowrap ${item.logisticsPerUnit ? "text-amber-700" : "text-muted-foreground"}`}>
                         {item.logisticsPerUnit ? `+${formatINR(item.logisticsPerUnit)}` : "–"}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right">
+                      <td className="p-3 align-middle text-sm text-right tabular-nums whitespace-nowrap font-semibold text-slate-900">
                         {formatINR(item.landedRate ?? item.rate)}
                       </td>
-                      <td className="p-3 align-middle text-sm text-right font-medium">
+                      <td className="p-3 align-middle text-sm text-right tabular-nums whitespace-nowrap font-medium">
                         {formatINR(item.averageRate)}
                       </td>
                     </tr>

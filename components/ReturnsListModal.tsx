@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { PackageOpen, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,8 @@ import {
   InventoryReturnsPage,
 } from "@/api/items";
 import { formatINR, formatQty } from "@/utils/format";
-import { formatLongDate } from "@/components/ui/DatePicker";
 import ListStatusRow from "@/components/ListStatusRow";
+import { CodeBadge, DateCell, EmptyRow } from "@/components/mis/ui";
 
 const PAGE_SIZE = 20;
 
@@ -80,7 +80,7 @@ export default function ReturnsListModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-4xl flex flex-col max-h-[90vh] overflow-hidden"
+        className="sm:max-w-4xl flex flex-col max-h-[90vh] overflow-hidden min-w-0"
         data-testid="returns-list"
       >
         <DialogHeader className="shrink-0">
@@ -107,11 +107,11 @@ export default function ReturnsListModal({
           <table className="w-full text-sm">
             <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted">
               <tr className="border-b">
-                <th className="p-2 text-left font-medium">Return No.</th>
-                <th className="p-2 text-left font-medium">Date</th>
-                <th className="p-2 text-left font-medium">Customer</th>
-                <th className="p-2 text-left font-medium">Items</th>
-                <th className="p-2 text-right font-medium">Total</th>
+                <th className="px-3 py-2.5 text-left font-medium">Return No.</th>
+                <th className="px-3 py-2.5 text-left font-medium">Date</th>
+                <th className="px-3 py-2.5 text-left font-medium">Customer</th>
+                <th className="px-3 py-2.5 text-left font-medium">Items</th>
+                <th className="px-3 py-2.5 text-right font-medium">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -120,24 +120,36 @@ export default function ReturnsListModal({
                 <ListStatusRow status="error" colSpan={5} onRetry={() => setReload((n) => n + 1)} />
               )}
               {!loading && data && rows.length === 0 && (
-                <ListStatusRow status="empty" colSpan={5} search={debounced} emptyText="No returns yet." />
+                <EmptyRow
+                  colSpan={5}
+                  icon={debounced ? Search : PackageOpen}
+                  title={debounced ? `No results for “${debounced}”.` : "No returns yet."}
+                  description={
+                    debounced
+                      ? "Check the return number (e.g. RET008) or the customer name."
+                      : "Returns added with Return Goods will show here."
+                  }
+                />
               )}
               {!loading && rows.map((r) => (
                 <tr
                   key={r._id}
-                  className="border-b last:border-b-0 align-top"
+                  className="border-b last:border-b-0 align-top hover:bg-slate-50/70"
                 >
-                  <td className="p-2 font-medium whitespace-nowrap">
-                    {r.returnNumber}
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <CodeBadge code={r.returnNumber} />
                   </td>
-                  <td className="p-2 whitespace-nowrap">
-                    {formatLongDate(new Date(r.date))}
+                  <td className="px-3 py-2.5">
+                    <DateCell date={r.date} />
                   </td>
-                  <td className="p-2">
+                  <td className="px-3 py-2.5 min-w-[140px]">
                     {r.customer ? (
                       <>
-                        {r.customer.businessName}
-                        <span className="block text-xs text-green-700">
+                        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                          <span className="font-medium text-slate-900">{r.customer.businessName}</span>
+                          {r.customer.customerId && <CodeBadge code={r.customer.customerId} />}
+                        </span>
+                        <span className="mt-0.5 block text-xs font-medium text-green-700">
                           Credited
                         </span>
                       </>
@@ -147,10 +159,11 @@ export default function ReturnsListModal({
                       </span>
                     )}
                   </td>
-                  <td className="p-2 min-w-[180px]">
+                  <td className="px-3 py-2.5 min-w-[180px]">
                     {r.items.map((it, i) => (
-                      <div key={i} className="text-xs">
-                        {it.name}: {qtyText(it)} × {formatINR(it.rate)}
+                      <div key={i} className="text-xs leading-5 tabular-nums">
+                        <span className="text-slate-900">{it.name}</span>
+                        <span className="text-slate-600">: {qtyText(it)} × {formatINR(it.rate)}</span>
                       </div>
                     ))}
                     {r.notes && (
@@ -159,7 +172,7 @@ export default function ReturnsListModal({
                       </div>
                     )}
                   </td>
-                  <td className="p-2 text-right whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap font-semibold tabular-nums">
                     {formatINR(r.totalAmount)}
                   </td>
                 </tr>

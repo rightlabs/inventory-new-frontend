@@ -25,6 +25,7 @@ import {
 } from "@/api/items";
 import { getCustomers } from "@/api/customer";
 import { balanceLabel, formatINR, formatQty, round2 } from "@/utils/format";
+import { CodeBadge } from "@/components/mis/ui";
 
 interface ReturnLine {
   itemId: string;
@@ -294,7 +295,7 @@ export default function ReturnInventoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" data-testid="return-modal">
+      <DialogContent className="sm:max-w-2xl grid-cols-[minmax(0,1fr)]" data-testid="return-modal">
         <DialogHeader>
           <DialogTitle>Return Goods (without bill)</DialogTitle>
           <DialogDescription>
@@ -327,9 +328,19 @@ export default function ReturnInventoryModal({
                 stock-only return.
               </p>
               {customer && (
-                <div className="text-xs mt-1 text-muted-foreground">
-                  Now:{" "}
-                  <BalanceAmount value={customer.currentBalance} entity="customer" />
+                <div
+                  className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-xs text-slate-600"
+                  data-testid="return-customer-balance"
+                >
+                  <CodeBadge code={customer.id} />
+                  <span>
+                    Now:{" "}
+                    <BalanceAmount
+                      value={customer.currentBalance}
+                      entity="customer"
+                      className="font-semibold tabular-nums text-slate-900"
+                    />
+                  </span>
                 </div>
               )}
             </div>
@@ -433,18 +444,24 @@ export default function ReturnInventoryModal({
                   </Button>
                 </div>
                 <div className="col-span-12 flex flex-wrap items-center justify-between gap-x-4 text-xs text-muted-foreground">
-                  <span>
-                    {customer && line.hint && !line.rateEdited
-                      ? line.hint.source === "last_sale"
-                        ? `Price from last sale ${line.hint.saleNumber} (${shortDate(
-                            line.hint.saleDate
-                          )})`
-                        : "Never bought by this customer — item selling rate"
-                      : customer && line.rateEdited
-                      ? "Price changed by you"
-                      : ""}
+                  <span className="inline-flex flex-wrap items-center gap-x-1">
+                    {customer && line.hint && !line.rateEdited ? (
+                      line.hint.source === "last_sale" ? (
+                        <>
+                          Price from last sale{" "}
+                          {line.hint.saleNumber && <CodeBadge code={line.hint.saleNumber} />}{" "}
+                          ({shortDate(line.hint.saleDate)})
+                        </>
+                      ) : (
+                        "Never bought by this customer — item selling rate"
+                      )
+                    ) : customer && line.rateEdited ? (
+                      <span className="font-medium text-amber-700">Price changed by you</span>
+                    ) : (
+                      ""
+                    )}
                   </span>
-                  <span className="font-medium text-foreground">
+                  <span className="font-semibold text-foreground tabular-nums">
                     Amount {formatINR(amount)}
                   </span>
                 </div>
@@ -471,7 +488,7 @@ export default function ReturnInventoryModal({
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <div className="text-sm" data-testid="return-total">
             {customer ? "Credit to customer" : "Total"}:{" "}
-            <span className="font-semibold">{formatINR(total)}</span>
+            <span className="text-base font-semibold tabular-nums text-slate-900">{formatINR(total)}</span>
             {customer && total > 0 && (
               <span className="text-muted-foreground">
                 {" "}
@@ -479,6 +496,7 @@ export default function ReturnInventoryModal({
                 <BalanceAmount
                   value={round2(customer.currentBalance - total)}
                   entity="customer"
+                  className="font-medium tabular-nums"
                 />
               </span>
             )}

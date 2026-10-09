@@ -34,6 +34,7 @@ import { useUser } from "@/contexts/userContext";
 import ReturnInventoryModal from "@/components/Forms/ReturnInventoryModal";
 import ReturnsListModal from "@/components/ReturnsListModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
+import { PartyName } from "@/components/ModalParts";
 import {
   BaseItem,
   FittingItem,
@@ -718,6 +719,13 @@ export default function ItemsPage() {
                   ? "Update item details"
                   : "Enter item details and initial stock level"}
               </DialogDescription>
+              {selectedItem && (
+                <PartyName
+                  name={selectedItem.name}
+                  code={selectedItem.code}
+                  className="pt-1 text-sm"
+                />
+              )}
             </DialogHeader>
             <ItemForm
               initialData={selectedItem}
