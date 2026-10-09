@@ -107,7 +107,7 @@ export interface CashBookRow {
   direction: "in" | "out";
   party?: string;
   partyCode?: string;
-  partyType: "customer" | "vendor";
+  partyType: "customer" | "vendor" | "transporter";
   mode: CashMode;
   amount: number;
   kind: string;

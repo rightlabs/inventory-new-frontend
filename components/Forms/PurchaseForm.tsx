@@ -57,6 +57,13 @@ export interface PurchaseFormData {
   destination: string;
   vehicleNo: string;
   freight: number | string;
+  // Who paid the freight: "shop" = the shop paid a transporter (not on the
+  // vendor bill; Cash Book OUT), "vendor" = on the vendor's bill.
+  freightPaidBy: "shop" | "vendor";
+  freightMode?: "cash" | "cheque" | "online";
+  transporter?: string;
+  // Sent to the API (built from the three fields above).
+  freightPayment?: { mode: string; transporter: string };
   tcs: number | string;
   discount: number | string;
   amountPaid: number | string;
@@ -209,6 +216,9 @@ const PurchaseModal = ({
     destination: "",
     vehicleNo: "",
     freight: "",
+    freightPaidBy: "shop",
+    freightMode: "cash",
+    transporter: "",
     tcs: "",
     discount: "",
     amountPaid: "",
@@ -410,7 +420,9 @@ const PurchaseModal = ({
     const afterDiscount = round2(processedData.totalAmount - discountAmount);
     const freightAmount = round2(formData.freight);
     const tcsAmount = round2(formData.tcs);
-    const grandTotal = round2(afterDiscount + freightAmount + tcsAmount);
+    // Freight paid by the shop to a transporter is not owed to the vendor.
+    const freightOnBill = formData.freightPaidBy === "vendor" ? freightAmount : 0;
+    const grandTotal = round2(afterDiscount + freightOnBill + tcsAmount);
     const balance = round2(grandTotal - Number(formData.amountPaid));
 
     return {
@@ -539,6 +551,11 @@ const PurchaseModal = ({
       const response = await createPurchase({
         ...purchaseData,
         freight: round2(formData.freight),
+        freightPaidBy: formData.freightPaidBy,
+        freightPayment:
+          formData.freightPaidBy === "shop"
+            ? { mode: formData.freightMode || "cash", transporter: (formData.transporter || "").trim() }
+            : undefined,
         tcs: round2(formData.tcs),
         amountPaid: round2(formData.amountPaid),
         paymentMode: formData.paymentMode,
@@ -571,6 +588,9 @@ const PurchaseModal = ({
       destination: "",
       vehicleNo: "",
       freight: "",
+      freightPaidBy: "shop",
+      freightMode: "cash",
+      transporter: "",
       tcs: "",
       discount: "",
       amountPaid: "",
@@ -697,7 +717,7 @@ const PurchaseModal = ({
   };
 
   return (
-    <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden grid-cols-[minmax(0,1fr)]">
       <DialogHeader>
         <DialogTitle>Add New Purchase</DialogTitle>
         <DialogDescription>
@@ -705,9 +725,9 @@ const PurchaseModal = ({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-6 py-4">
+      <div className="grid gap-6 py-4 grid-cols-[minmax(0,1fr)]">
         {/* Basic Purchase Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2 gap-4">
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="text-sm font-medium mb-1 block">
@@ -885,7 +905,7 @@ const PurchaseModal = ({
                       <Trash2 className="h-4 w-4 mr-2" /> Clear
                     </Button>
                   </div>
-                  <div className="border rounded-md">
+                  <div className="border rounded-md overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>{renderTableColumns()}</TableRow>
@@ -916,7 +936,7 @@ const PurchaseModal = ({
         {/* Payment Details */}
         {processedData && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">
                   Extra Discount (%)
@@ -1008,6 +1028,62 @@ const PurchaseModal = ({
                   onKeyDown={handleNumericKeyDown}
                 />
               </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  Freight paid by
+                </label>
+                <Select
+                  value={formData.freightPaidBy}
+                  onValueChange={(v) =>
+                    setFormData((prev) => ({ ...prev, freightPaidBy: v as "shop" | "vendor" }))
+                  }
+                >
+                  <SelectTrigger data-testid="freight-paid-by">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="shop">Shop (transporter)</SelectItem>
+                    <SelectItem value="vendor">Vendor bill</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.freightPaidBy === "shop" && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">
+                      Freight payment mode
+                    </label>
+                    <Select
+                      value={formData.freightMode}
+                      onValueChange={(v) =>
+                        setFormData((prev) => ({ ...prev, freightMode: v as "cash" | "cheque" | "online" }))
+                      }
+                    >
+                      <SelectTrigger data-testid="freight-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="cheque">Cheque</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">
+                      Transporter (optional)
+                    </label>
+                    <Input
+                      name="transporter"
+                      placeholder="Transporter name"
+                      value={formData.transporter}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, transporter: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="text-sm font-medium mb-1 block">

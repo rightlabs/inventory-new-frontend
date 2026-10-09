@@ -46,7 +46,10 @@ const splitText = (s: CashSplit) => {
 
 // Bill / receipt number to show; account payments have no bill.
 const billNo = (r: CashBookRow) =>
-  r.documentRef === "Sale" || r.documentRef === "Purchase" || r.documentRef === "Payment"
+  r.documentRef === "Sale" ||
+  r.documentRef === "Purchase" ||
+  r.documentRef === "Payment" ||
+  r.documentRef === "Freight"
     ? r.documentNumber
     : "";
 
@@ -142,7 +145,7 @@ export default function CashBook({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { key: "in", label: "Money in", sub: "Received from customers", tone: "text-emerald-600", Icon: ArrowDownLeft },
-          { key: "out", label: "Money out", sub: "Paid to vendors + refunds", tone: "text-rose-600", Icon: ArrowUpRight },
+          { key: "out", label: "Money out", sub: "Vendors, transporters + refunds", tone: "text-rose-600", Icon: ArrowUpRight },
           { key: "net", label: "Net (in − out)", sub: "", tone: (t?.net.total ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600", Icon: null },
         ].map((c) => {
           const s = t?.[c.key as "in" | "out" | "net"];

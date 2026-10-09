@@ -24,9 +24,17 @@ const SummaryPurchase: React.FC<{
         </div>
       )}
       {formData.freight > 0 && (
-        <div className="flex justify-between">
-          <span className="text-sm">Freight</span>
-          <span>{formatCurrency(Number(formData.freight))}</span>
+        <div className="flex justify-between gap-2" data-testid="summary-freight">
+          <span className="text-sm">
+            {formData.freightPaidBy === "shop"
+              ? "Freight (paid to transporter — not on vendor bill)"
+              : "Freight (on vendor bill)"}
+          </span>
+          <span className={formData.freightPaidBy === "shop" ? "text-muted-foreground" : ""}>
+            {formData.freightPaidBy === "shop" ? "(" : ""}
+            {formatCurrency(Number(formData.freight))}
+            {formData.freightPaidBy === "shop" ? ")" : ""}
+          </span>
         </div>
       )}
       {formData.tcs > 0 && (

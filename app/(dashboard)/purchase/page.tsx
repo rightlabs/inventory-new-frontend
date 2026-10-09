@@ -37,6 +37,9 @@ interface Purchase {
   totalAmount: number;
   discount: number;
   grandTotal: number;
+  freight?: number;
+  freightPaidBy?: "shop" | "vendor";
+  freightPayment?: { mode?: string; transporter?: string };
   balanceAmount: number;
   status: "pending" | "received";
   paymentStatus: "unpaid" | "partial" | "paid";
@@ -289,6 +292,13 @@ export default function PurchasePage() {
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatINR(purchase.grandTotal)}
+                        {Number(purchase.freight) > 0 && (
+                          <div className="text-xs text-muted-foreground whitespace-nowrap" data-testid="purchase-freight-note">
+                            {purchase.freightPaidBy === "shop"
+                              ? `Freight ${formatINR(purchase.freight || 0)} paid to ${purchase.freightPayment?.transporter || "transporter"}`
+                              : `incl. freight ${formatINR(purchase.freight || 0)} (vendor bill)`}
+                          </div>
+                        )}
                       </td>
                       <td className="p-4 align-middle text-right">
                         {formatINR(purchase.balanceAmount)}
