@@ -10,6 +10,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface DataPaginationProps {
   currentPage: number;
@@ -49,7 +52,25 @@ export default function DataPagination({
   disabled = false,
   className,
 }: DataPaginationProps) {
+  const [jump, setJump] = useState("");
+  const [jumpHint, setJumpHint] = useState("");
+
   if (totalPages <= 1) return null;
+
+  // "Go to page": whole numbers 1..totalPages only; anything else shows a
+  // short hint and sends no request. The list keeps its search / filters
+  // (onPageChange is the list's own page loader).
+  const submitJump = () => {
+    const raw = jump.trim();
+    const n = Number(raw);
+    if (!raw || !Number.isInteger(n) || n < 1 || n > totalPages) {
+      setJumpHint(`Enter 1–${totalPages}`);
+      return;
+    }
+    setJumpHint("");
+    setJump("");
+    go(n);
+  };
 
   const pages = buildPages(currentPage, totalPages);
 
@@ -65,7 +86,11 @@ export default function DataPagination({
   const disabledCls = "pointer-events-none opacity-50";
 
   return (
-    <Pagination className={cn("mx-0 w-auto justify-end", className)}>
+    <div
+      className={cn("flex flex-wrap items-center justify-end gap-x-3 gap-y-2", className)}
+      data-testid="data-pagination"
+    >
+    <Pagination className="mx-0 w-auto justify-end">
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
@@ -117,5 +142,39 @@ export default function DataPagination({
         </PaginationItem>
       </PaginationContent>
     </Pagination>
+      <form
+        className="flex items-center gap-1.5 text-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitJump();
+        }}
+        data-testid="page-jump"
+      >
+        <span className="text-muted-foreground whitespace-nowrap">
+          Go to page
+        </span>
+        <Input
+          aria-label={`Go to page (1 to ${totalPages})`}
+          inputMode="numeric"
+          value={jump}
+          onChange={(e) => {
+            setJump(e.target.value.replace(/[^0-9]/g, "").slice(0, 5));
+            setJumpHint("");
+          }}
+          placeholder={String(currentPage)}
+          className="h-8 w-16 px-2 text-center"
+          disabled={disabled}
+          data-testid="page-jump-input"
+        />
+        <Button type="submit" variant="outline" size="sm" className="h-8 px-3" disabled={disabled}>
+          Go
+        </Button>
+        {jumpHint && (
+          <span className="text-xs text-red-600 whitespace-nowrap" role="alert" data-testid="page-jump-hint">
+            {jumpHint}
+          </span>
+        )}
+      </form>
+    </div>
   );
 }
