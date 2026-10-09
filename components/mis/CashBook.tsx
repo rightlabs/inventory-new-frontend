@@ -142,7 +142,7 @@ export default function CashBook({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { key: "in", label: "Money in", sub: "Received from customers", tone: "text-emerald-600", Icon: ArrowDownLeft },
-          { key: "out", label: "Money out", sub: "Paid to vendors", tone: "text-rose-600", Icon: ArrowUpRight },
+          { key: "out", label: "Money out", sub: "Paid to vendors + refunds", tone: "text-rose-600", Icon: ArrowUpRight },
           { key: "net", label: "Net (in − out)", sub: "", tone: (t?.net.total ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600", Icon: null },
         ].map((c) => {
           const s = t?.[c.key as "in" | "out" | "net"];
@@ -297,7 +297,9 @@ export default function CashBook({
                   <div>{billNo(r) || r.kind}</div>
                   <div className="text-xs text-muted-foreground">
                     {billNo(r) ? r.kind : ""}
-                    {r.reference ? `${billNo(r) ? " · " : ""}Ref ${r.reference}` : ""}
+                    {r.reference && r.reference !== billNo(r)
+                      ? `${billNo(r) ? " · " : ""}Ref ${r.reference}`
+                      : ""}
                   </div>
                 </td>
               </tr>
