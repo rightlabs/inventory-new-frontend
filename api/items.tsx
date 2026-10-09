@@ -108,6 +108,7 @@ export interface ItemCost {
     purchaseNumber: string;
     date: string;
     baseRate: number;
+    discountPerUnit?: number;
     logisticsPerUnit: number;
     landedRate: number;
     isCurrent: boolean;

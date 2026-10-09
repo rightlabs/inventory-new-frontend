@@ -21,6 +21,7 @@ interface PurchaseHistoryItem {
   averageRate: number;
   // Bill rate + freight/logistics per unit = landed rate (the cost used).
   baseRate?: number;
+  discountPerUnit?: number; // bill discount share per unit (Oct 2026 on)
   logisticsPerUnit?: number;
   landedRate?: number;
 }
@@ -69,7 +70,7 @@ export default function PriceHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[820px] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Price History</DialogTitle>
           <DialogDescription>{itemName}</DialogDescription>
@@ -107,7 +108,7 @@ export default function PriceHistoryModal({
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full" data-testid="price-history-table">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -122,6 +123,9 @@ export default function PriceHistoryModal({
                     </th>
                     <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground whitespace-nowrap">
                       Bill Rate
+                    </th>
+                    <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
+                      Discount
                     </th>
                     <th className="h-10 px-4 text-right align-middle text-sm font-medium text-muted-foreground">
                       Logistics
@@ -151,6 +155,9 @@ export default function PriceHistoryModal({
                       </td>
                       <td className="p-3 align-middle text-sm text-right">
                         {formatINR(item.baseRate ?? item.rate)}
+                      </td>
+                      <td className="p-3 align-middle text-sm text-right text-muted-foreground">
+                        {item.discountPerUnit ? `−${formatINR(item.discountPerUnit)}` : "–"}
                       </td>
                       <td className="p-3 align-middle text-sm text-right text-muted-foreground">
                         {item.logisticsPerUnit ? `+${formatINR(item.logisticsPerUnit)}` : "–"}

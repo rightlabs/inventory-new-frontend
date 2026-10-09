@@ -63,13 +63,19 @@ const handleNumericKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
 };
 
 // "Incl. freight: ₹150.00 + ₹3.00/kg (PO046)" | "Last purchase PO046: no
-// freight" | rate changed by Edit Item after that purchase.
+// freight" | with a bill discount "Bill ₹150.00 − ₹3.00 disc + ₹3.00/kg
+// freight (PO046)" | rate changed by Edit Item after that purchase.
 const costNote = (
   b: NonNullable<ItemCost["lastPurchase"]>,
   unit: "kg" | "pc"
 ) => {
   if (!b.isCurrent)
     return `Rate set by Edit Item (last purchase ${b.purchaseNumber}: ${formatINR(b.landedRate)}/${unit})`;
+  const disc = Number(b.discountPerUnit) || 0;
+  if (disc > 0)
+    return b.logisticsPerUnit > 0
+      ? `Bill ${formatINR(b.baseRate)} − ${formatINR(disc)} disc + ${formatINR(b.logisticsPerUnit)}/${unit} freight (${b.purchaseNumber})`
+      : `Bill ${formatINR(b.baseRate)} − ${formatINR(disc)}/${unit} disc, no freight (${b.purchaseNumber})`;
   if (b.logisticsPerUnit > 0)
     return `Incl. freight: ${formatINR(b.baseRate)} + ${formatINR(b.logisticsPerUnit)}/${unit} (${b.purchaseNumber})`;
   return `Last purchase ${b.purchaseNumber}: no freight`;
