@@ -58,12 +58,16 @@ export default function DashboardPage() {
 
   // Redirect sales users to sales page - they don't have access to dashboard
   useEffect(() => {
-    if (user?.role === "sales") {
+    if (user && user.role !== "admin") {
       router.replace("/sales");
     }
   }, [user, router]);
 
+  // /dashboard/* is admin only (401 for sales): fetch only once the user is
+  // known to be admin, so a sales user who opens this URL fires no request.
+  const isAdmin = user?.role === "admin";
   useEffect(() => {
+    if (!isAdmin) return;
     const fetchData = async () => {
       try {
         const [dashboardRes, inventoryRes] = await Promise.all([
@@ -78,10 +82,10 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, []);
+  }, [isAdmin]);
 
   // Show loading while checking role or loading data
-  if (!dashboardData || !inventoryData || user?.role === "sales")
+  if (!dashboardData || !inventoryData || !isAdmin)
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
