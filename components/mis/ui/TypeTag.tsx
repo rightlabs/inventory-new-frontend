@@ -12,7 +12,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { CashRowType } from "./helpers";
 
-export const TYPE_META: Record<CashRowType, { label: string; Icon: LucideIcon; className: string }> = {
+/** Cash-book row types, plus "return" for the Customer Profit drill-down. */
+export type TagType = CashRowType | "return";
+
+export const TYPE_META: Record<TagType, { label: string; Icon: LucideIcon; className: string }> = {
   sale: { label: "Sale payment", Icon: FileText, className: "bg-sky-50 text-sky-800 ring-sky-200" },
   receipt: { label: "Receipt", Icon: HandCoins, className: "bg-teal-50 text-teal-800 ring-teal-200" },
   advance: { label: "Advance", Icon: Wallet, className: "bg-indigo-50 text-indigo-800 ring-indigo-200" },
@@ -21,11 +24,12 @@ export const TYPE_META: Record<CashRowType, { label: string; Icon: LucideIcon; c
   freight: { label: "Freight", Icon: Truck, className: "bg-amber-50 text-amber-800 ring-amber-200" },
   // Refund is the one staff must not miss: filled, stronger ring, bold.
   refund: { label: "Refund", Icon: Undo2, className: "bg-rose-100 text-rose-800 ring-rose-300 font-semibold" },
+  return: { label: "Return", Icon: Undo2, className: "bg-rose-50 text-rose-800 ring-rose-200" },
   other: { label: "Other", Icon: HelpCircle, className: "bg-slate-50 text-slate-600 ring-slate-200" },
 };
 
 export interface TypeTagProps {
-  type: CashRowType;
+  type: TagType;
   /** Override the default text (e.g. "Payment received"). */
   label?: string;
   className?: string;

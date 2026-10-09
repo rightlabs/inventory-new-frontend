@@ -71,10 +71,22 @@ export interface DayGroupRowProps extends DayGroupHeaderProps {
    * Pass the thead height in px (the MIS tables' header is 45px). false = off.
    */
   stickyTop?: number | false;
+  /**
+   * Below 768px a wide table scrolls sideways; the header is pinned to the
+   * left edge and capped to this width so its totals wrap into view instead
+   * of hiding off-screen. Default fits the MIS page (main p-4 + cell px-3).
+   */
+  narrowWidth?: string;
 }
 
 /** The DayGroupHeader as a full-width <tr> for a table body. */
-export function DayGroupRow({ colSpan, stickyTop = 45, className, ...header }: DayGroupRowProps) {
+export function DayGroupRow({
+  colSpan,
+  stickyTop = 45,
+  narrowWidth = "calc(100vw - 3.75rem)",
+  className,
+  ...header
+}: DayGroupRowProps) {
   return (
     <tr data-testid="day-group">
       <th
@@ -88,7 +100,12 @@ export function DayGroupRow({ colSpan, stickyTop = 45, className, ...header }: D
         )}
         style={stickyTop !== false ? { top: stickyTop } : undefined}
       >
-        <DayGroupHeader {...header} />
+        <div
+          className="sticky left-3 max-md:w-[var(--day-w)] max-md:max-w-[var(--day-w)]"
+          style={{ ["--day-w" as string]: narrowWidth }}
+        >
+          <DayGroupHeader {...header} />
+        </div>
       </th>
     </tr>
   );

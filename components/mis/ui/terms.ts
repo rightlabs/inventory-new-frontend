@@ -77,6 +77,12 @@ export const MIS_TERMS = {
     hi: "इस पैसे का तरीका (कैश / ऑनलाइन / चेक) एंट्री में नहीं लिखा गया।",
     en: "The payment mode (cash / online / cheque) was not entered for this money.",
   },
+  costBack: {
+    title: "Cost back",
+    hiTitle: "लागत वापस",
+    hi: "माल वापस आया, इसलिए उसकी लागत हटा दी गई।",
+    en: "Goods came back, so their cost is removed.",
+  },
 } as const satisfies Record<string, MisTerm>;
 
 export type MisTermKey = keyof typeof MIS_TERMS;

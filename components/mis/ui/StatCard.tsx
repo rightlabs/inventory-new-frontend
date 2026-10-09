@@ -64,6 +64,9 @@ export function StatCard({
   const infoProps = typeof info === "string" ? { term: info } : info ? { content: info } : null;
   const shown =
     value ?? (amount === null || amount === undefined ? "—" : formatINRSmart(amount));
+  // Crore-size amounts with paise ("₹37,99,233.37") step down one size so
+  // they never spill out of a narrow card.
+  const long = typeof shown === "string" && shown.length >= 13;
 
   return (
     <section
@@ -71,10 +74,11 @@ export function StatCard({
       aria-busy={loading || undefined}
       data-testid={rest["data-testid"]}
     >
-      <header className="flex items-center justify-between gap-3">
+      {/* Wraps (meta drops under the title) instead of cutting the title. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
         <h3 className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-600">
           {Icon && <Icon className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />}
-          <span className="truncate">{title}</span>
+          <span>{title}</span>
           {infoProps && <InfoTip {...infoProps} />}
         </h3>
         {meta && !loading && (
@@ -91,8 +95,14 @@ export function StatCard({
         <>
           <p
             className={cn(
-              "mt-1.5 font-semibold tabular-nums tracking-tight",
-              size === "lg" ? "text-[28px] leading-9 sm:text-[32px] sm:leading-10" : "text-2xl leading-8",
+              "mt-1.5 whitespace-nowrap font-semibold tabular-nums tracking-tight",
+              size === "lg"
+                ? long
+                  ? "text-[26px] leading-9 2xl:text-[30px] 2xl:leading-10"
+                  : "text-[28px] leading-9 sm:text-[32px] sm:leading-10"
+                : long
+                  ? "text-[22px] leading-8"
+                  : "text-2xl leading-8",
               toneClass(tone, amount)
             )}
           >

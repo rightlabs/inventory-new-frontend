@@ -34,18 +34,20 @@ const LEVEL_SR: Record<MarginLevel, string> = {
 
 /** Margin % as a coloured pill: green good, amber low, red loss. */
 export function MarginBadge({ margin, lowBelow = 5, lossBelow = 0, decimals = 1, className }: MarginBadgeProps) {
-  const level = marginLevel(margin, lowBelow, lossBelow);
+  // Classify the number as SHOWN: 4.996 prints "5.0%", so it must not be amber.
+  const shown = margin === null || margin === undefined ? margin : Number(margin.toFixed(decimals));
+  const level = marginLevel(shown, lowBelow, lossBelow);
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ring-1 ring-inset",
+        "relative inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ring-1 ring-inset",
         LEVEL_CLASS[level],
         className
       )}
       title={level === "low" ? `Below ${lowBelow}%` : undefined}
     >
       {level === "loss" && <TrendingDown className="h-3 w-3" aria-hidden />}
-      {level === "none" ? "—" : `${(margin as number) < 0 ? "−" : ""}${Math.abs(margin as number).toFixed(decimals)}%`}
+      {level === "none" ? "—" : `${(shown as number) < 0 ? "−" : ""}${Math.abs(shown as number).toFixed(decimals)}%`}
       <span className="sr-only">({LEVEL_SR[level]})</span>
     </span>
   );

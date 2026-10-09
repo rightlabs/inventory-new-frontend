@@ -26,7 +26,7 @@ export function NetSentence({ net, className }: NetSentenceProps) {
   return (
     <p
       className={cn(
-        "inline-flex items-start gap-1.5 text-sm font-medium leading-5",
+        "flex items-start gap-1.5 text-sm font-medium leading-5",
         zero ? "text-slate-600" : net > 0 ? "text-emerald-700" : "text-rose-700",
         className
       )}

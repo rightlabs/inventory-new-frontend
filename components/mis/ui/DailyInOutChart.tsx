@@ -112,14 +112,18 @@ export function DailyInOutChart({ data, height = 280, loading = false, className
 
       <div style={{ height }} className="relative">
         {loading ? (
-          <div className="flex h-full items-center gap-[3%] px-12" aria-hidden>
-            {Array.from({ length: 14 }).map((_, i) => (
-              <div key={i} className="flex h-full flex-1 flex-col justify-center">
-                <div className="animate-pulse rounded-t bg-slate-100" style={{ height: `${18 + ((i * 37) % 30)}%` }} />
-                <div className="h-px bg-slate-200" />
-                <div className="animate-pulse rounded-b bg-slate-100" style={{ height: `${10 + ((i * 23) % 22)}%` }} />
-              </div>
-            ))}
+          <div className="flex h-full flex-col px-1 pl-14" aria-hidden>
+            <div className="flex flex-1 items-end gap-[3%]">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="flex-1 animate-pulse rounded-t bg-slate-100" style={{ height: `${30 + ((i * 37) % 55)}%` }} />
+              ))}
+            </div>
+            <div className="h-px bg-slate-200" />
+            <div className="flex flex-1 items-start gap-[3%]">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="flex-1 animate-pulse rounded-b bg-slate-100" style={{ height: `${12 + ((i * 23) % 40)}%` }} />
+              ))}
+            </div>
           </div>
         ) : empty ? (
           <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 px-6 text-center">
