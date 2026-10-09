@@ -58,9 +58,13 @@ export function EmptyState({ title, description, icon: Icon = FileSearch, action
 }
 
 /** The same, as a full-width table row. */
-export function EmptyRow({ colSpan, ...props }: EmptyStateProps & { colSpan: number }) {
+export function EmptyRow({
+  colSpan,
+  testId,
+  ...props
+}: EmptyStateProps & { colSpan: number; testId?: string }) {
   return (
-    <tr>
+    <tr data-testid={testId}>
       <td colSpan={colSpan} className="p-0">
         <EmptyState size="sm" {...props} />
       </td>

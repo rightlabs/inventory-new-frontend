@@ -4,13 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import DataPagination from "@/components/DataPagination";
 import ListStatusRow from "@/components/ListStatusRow";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Download,
@@ -27,6 +20,8 @@ import {
   CircleDollarSign,
   Undo2,
   Wallet,
+  Receipt,
+  LayoutGrid,
 } from "lucide-react";
 import {
   LineChart,
@@ -39,6 +34,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import toast from "react-hot-toast";
+import { format, parse } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/userContext";
 import {
@@ -49,7 +45,16 @@ import {
   CashSplit,
 } from "@/api/mis";
 import { getSales } from "@/api/sale";
-import { formatAxisINR, formatINR } from "@/utils/format";
+import { formatINRShort, formatINRSmart } from "@/utils/formatSmart";
+import {
+  CodeBadge,
+  DateCell,
+  EmptyRow,
+  MarginBadge,
+  SignedAmount,
+  StatCard,
+  type StatCardProps,
+} from "@/components/mis/ui";
 import { downloadCsv, rowsToCsv } from "@/utils/csv";
 import DateRangeBar, { presetRange } from "@/components/mis/DateRangeBar";
 import CashBook from "@/components/mis/CashBook";
@@ -169,7 +174,7 @@ function AnalyticsContent() {
 
   const [summary, setSummary] = useState<MisSummary | null>(null);
   const [moneyIn, setMoneyIn] = useState<CashSplit | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(1);
@@ -191,6 +196,9 @@ function AnalyticsContent() {
       setSummary(res.data);
       setMoneyIn(cash.totals.in);
     } catch (err: any) {
+      // Never leave the previous range's figures under the new dates.
+      setSummary(null);
+      setMoneyIn(null);
       toast.error(err?.message || "Failed to load MIS summary");
     } finally {
       setSummaryLoading(false);
@@ -286,66 +294,85 @@ function AnalyticsContent() {
 
   const kpis = summary?.kpis;
 
-  const kpiCards = useMemo(() => {
-    if (!kpis) return [];
+  // Same 8 figures as before; only how they read changed (kit StatCard).
+  const kpiCards: (StatCardProps & { key: string })[] = useMemo(() => {
+    const k = kpis;
+    const n = (v: number, one: string, many: string) =>
+      `${formatNumber(v)} ${v === 1 ? one : many}`;
     return [
       {
-        label: "Total Revenue",
-        value: formatINR(kpis.totalRevenue),
+        key: "sales",
+        title: "Sales",
+        info: "sales",
         icon: IndianRupee,
-        tone: "text-primary",
-        sub: `${formatNumber(kpis.salesCount)} sale(s), after returns`,
+        amount: k?.totalRevenue,
+        meta: k && n(k.salesCount, "bill", "bills"),
+        sub: "After returns",
       },
       {
-        label: "Gross Profit",
-        value: formatINR(kpis.grossProfit),
-        icon: TrendingUp,
-        tone: kpis.grossProfit >= 0 ? "text-emerald-600" : "text-red-600",
-        sub: `Margin ${kpis.grossMargin.toFixed(2)}%`,
-      },
-      {
-        label: "COGS",
-        value: formatINR(kpis.totalCogs),
+        key: "cogs",
+        title: "Cost (COGS)",
+        info: "cost",
         icon: Package,
-        tone: "text-slate-600",
-        sub: "Cost of goods sold, less goods returned",
+        amount: k?.totalCogs,
+        sub: "Less goods returned",
       },
       {
-        label: "Returns",
-        value: formatINR(kpis.returnsValue),
+        key: "profit",
+        title: "Gross profit",
+        info: "grossProfit",
+        icon: TrendingUp,
+        amount: k?.grossProfit,
+        tone: "auto",
+        sub: k && (
+          <span className="inline-flex items-center gap-1.5">
+            Margin <MarginBadge margin={k.grossMargin} decimals={2} />
+          </span>
+        ),
+      },
+      {
+        key: "returns",
+        title: "Returns",
+        info: "returns",
         icon: Undo2,
-        tone: "text-amber-600",
-        sub: `${formatNumber(kpis.returnsCount)} return(s) · cost ${formatINR(
-          kpis.returnsCost
-        )} back in stock`,
+        amount: k?.returnsValue,
+        meta: k && n(k.returnsCount, "return", "returns"),
+        sub: k && `Cost ${formatINRSmart(k.returnsCost)} back in stock`,
       },
       {
-        label: "Money Received",
-        value: moneyIn ? formatINR(moneyIn.total) : "—",
+        key: "moneyIn",
+        title: "Money in",
+        info: "moneyIn",
         icon: Wallet,
-        tone: "text-emerald-600",
+        amount: moneyIn?.total,
+        tone: "in",
+        meta: moneyIn && n(moneyIn.count, "payment", "payments"),
         sub: "From customers (see Cash Book)",
       },
       {
-        label: "Purchases",
-        value: formatINR(kpis.totalPurchases),
+        key: "purchases",
+        title: "Purchases",
+        info: "purchases",
         icon: ShoppingCart,
-        tone: "text-slate-600",
-        sub: `${formatNumber(kpis.purchaseCount)} order(s)`,
+        amount: k?.totalPurchases,
+        meta: k && n(k.purchaseCount, "order", "orders"),
+        sub: "Purchase orders in these dates",
       },
       {
-        label: "Avg. Sale Value",
-        value: formatINR(kpis.avgOrderValue),
-        icon: IndianRupee,
-        tone: "text-slate-600",
-        sub: "Per sale order",
+        key: "avg",
+        title: "Avg. sale value",
+        info: "avgSale",
+        icon: Receipt,
+        amount: k?.avgOrderValue,
+        sub: "Per bill",
       },
       {
-        label: "Discounts Given",
-        value: formatINR(kpis.totalDiscount),
+        key: "discount",
+        title: "Discounts given",
+        info: "discount",
         icon: Percent,
-        tone: "text-slate-600",
-        sub: "Total in range",
+        amount: k?.totalDiscount,
+        sub: "On bills in these dates",
       },
     ];
   }, [kpis, moneyIn]);
@@ -399,165 +426,156 @@ function AnalyticsContent() {
         </TabsContent>
 
         <TabsContent value="overview" className="mt-0 space-y-6">
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {summaryLoading && !summary && (
-          <Card>
-            <CardContent className="pt-6 text-muted-foreground">
-              Loading summary...
-            </CardContent>
-          </Card>
-        )}
-        {kpiCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.label}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">
-                    {card.label}
-                  </span>
-                  <Icon className={`h-5 w-5 ${card.tone}`} />
-                </div>
-                <div className={`text-2xl font-semibold ${card.tone}`}>
-                  {card.value}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {card.sub}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* KPI Grid: 4 a row on wide screens, 2 on tablets, 1 on phones */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="mis-kpis">
+        {kpiCards.map(({ key, ...card }) => (
+          <StatCard
+            key={key}
+            size="md"
+            loading={summaryLoading}
+            data-testid={`kpi-${key}`}
+            {...card}
+          />
+        ))}
       </div>
 
       {/* Category Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Category Performance</CardTitle>
-          <CardDescription>
-            Item-level revenue and margin per category in the selected range.
-            Revenue and COGS are after returns (counted on the return day).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {summary && summary.categoryBreakdown.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">
-              No sales in this range.
-            </div>
-          ) : (
-            <div className="rounded-md border overflow-auto max-h-[70vh]">
-              <table className="w-full text-sm">
-                <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-3 text-left font-medium">Category</th>
-                    <th className="p-3 text-right font-medium">Items Sold</th>
-                    <th className="p-3 text-right font-medium">Revenue</th>
-                    <th className="p-3 text-right font-medium">Returns</th>
-                    <th className="p-3 text-right font-medium">COGS</th>
-                    <th className="p-3 text-right font-medium">Profit</th>
-                    <th className="p-3 text-right font-medium">Margin</th>
+      <section className="rounded-xl border border-slate-200 bg-white" data-testid="mis-categories">
+        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-4 sm:px-5 sm:pt-5">
+          <h2 className="inline-flex items-center gap-2 text-base font-semibold text-slate-900">
+            <LayoutGrid className="h-4 w-4 text-slate-400" aria-hidden />
+            Category performance
+          </h2>
+          <p className="text-[13px] text-slate-500">
+            After returns, counted on the day goods came back.
+          </p>
+        </header>
+        <div className="mt-3 max-h-[70vh] overflow-auto border-t border-slate-200">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-slate-100">
+              <tr className="border-b border-slate-200 text-xs text-slate-600">
+                <th className="h-[45px] px-4 text-left font-medium sm:px-5">Category</th>
+                <th className="px-3 text-right font-medium">Items sold</th>
+                <th className="px-3 text-right font-medium">Revenue</th>
+                <th className="px-3 text-right font-medium">Returns</th>
+                <th className="px-3 text-right font-medium">COGS</th>
+                <th className="px-3 text-right font-medium">Profit</th>
+                <th className="px-4 text-right font-medium sm:px-5">Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!summary &&
+                summaryLoading &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i} className="border-b border-slate-100">
+                    {Array.from({ length: 7 }).map((__, j) => (
+                      <td key={j} className="px-3 py-3 first:px-4 sm:first:px-5">
+                        <div className="ml-auto h-4 w-20 animate-pulse rounded bg-slate-100 first:ml-0" />
+                      </td>
+                    ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {(summary?.categoryBreakdown || []).map((c) => (
-                    <tr key={c.category} className="border-b last:border-b-0">
-                      <td className="p-3 capitalize">{c.category}</td>
-                      <td className="p-3 text-right">{formatNumber(c.count)}</td>
-                      <td className="p-3 text-right">
-                        {formatINR(c.revenue)}
-                      </td>
-                      <td className="p-3 text-right">
-                        {c.returns ? formatINR(c.returns) : "—"}
-                      </td>
-                      <td className="p-3 text-right">
-                        {formatINR(c.cogs)}
-                      </td>
-                      <td
-                        className={`p-3 text-right ${
-                          c.profit >= 0 ? "text-emerald-600" : "text-red-600"
-                        }`}
-                      >
-                        {formatINR(c.profit)}
-                      </td>
-                      <td
-                        className={`p-3 text-right ${
-                          c.margin >= 0 ? "text-emerald-600" : "text-red-600"
-                        }`}
-                      >
-                        {c.margin.toFixed(2)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              {summary && summary.categoryBreakdown.length === 0 && (
+                <EmptyRow
+                  colSpan={7}
+                  title="No sales on these dates"
+                  description="Pick a longer date range above."
+                />
+              )}
+              {(summary?.categoryBreakdown || []).map((c) => (
+                <tr key={c.category} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60">
+                  <td className="px-4 py-2.5 font-medium capitalize text-slate-900 sm:px-5">{c.category}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">{formatNumber(c.count)}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-900">
+                    {formatINRSmart(c.revenue)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-700">
+                    {c.returns ? formatINRSmart(c.returns) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-700">
+                    {formatINRSmart(c.cogs)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <SignedAmount value={c.profit} plus={false} />
+                  </td>
+                  <td className="px-4 py-2.5 text-right sm:px-5">
+                    <MarginBadge margin={c.margin} decimals={2} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Daily trend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily Revenue vs Purchases</CardTitle>
-          <CardDescription>
-            Day-by-day view of sales (excluding cancelled, after customer
-            returns) and purchases.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[320px]">
-            {summary && summary.dailySeries.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No activity in this range.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={summary?.dailySeries || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} />
-                  <YAxis width={88} tickFormatter={formatAxisINR} tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(value: number) => formatINR(value)}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#7C3AED"
-                    name="Revenue"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="purchases"
-                    stroke="#EDC53A"
-                    name="Purchases"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 sm:p-5" data-testid="mis-daily">
+        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="inline-flex items-center gap-2 text-base font-semibold text-slate-900">
+            <TrendingUp className="h-4 w-4 text-slate-400" aria-hidden />
+            Daily sales vs purchases
+          </h2>
+          <p className="text-[13px] text-slate-500">
+            Sales leave out cancelled bills and are after customer returns.
+          </p>
+        </header>
+        <div className="h-[300px]">
+          {summary && summary.dailySeries.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 px-6 text-center">
+              <p className="text-sm font-medium text-slate-700">No sales or purchases on these dates</p>
+              <p className="mt-0.5 text-xs text-slate-500">Pick a longer date range above.</p>
+            </div>
+          ) : !summary && summaryLoading ? (
+            <div className="h-full animate-pulse rounded-lg bg-slate-50" aria-hidden />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={summary?.dailySeries || []} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid vertical={false} stroke="#EEF2F6" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(d: string) => format(parse(d, "yyyy-MM-dd", new Date()), "d MMM")}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  tickLine={false}
+                  axisLine={false}
+                  minTickGap={16}
+                />
+                <YAxis
+                  width={56}
+                  tickFormatter={(v: number) => formatINRShort(v)}
+                  tick={{ fontSize: 11, fill: "#64748B" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  formatter={(value: number) => formatINRSmart(value)}
+                  labelFormatter={(d: string) => format(parse(d, "yyyy-MM-dd", new Date()), "EEE, d MMM yyyy")}
+                  contentStyle={{ borderRadius: 8, borderColor: "#E2E8F0", fontSize: 13 }}
+                />
+                <Legend iconType="plainline" wrapperStyle={{ fontSize: 13 }} />
+                <Line type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2} dot={false} name="Sales" />
+                <Line type="monotone" dataKey="purchases" stroke="#D97706" strokeWidth={2} dot={false} name="Purchases" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </section>
 
       {/* Sales Orders Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Sales Orders</CardTitle>
-              <CardDescription>
-                {formatNumber(totalItems)} order(s) in range — page {page} of{" "}
-                {totalPages}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-auto max-h-[70vh]">
-            <table className="w-full text-sm">
-              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
-                <tr className="border-b bg-muted/50">
+      <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 sm:p-5" data-testid="mis-sales">
+        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="inline-flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Receipt className="h-4 w-4 text-slate-400" aria-hidden />
+            Sales orders
+          </h2>
+          <p className="text-[13px] text-slate-500">
+            {formatNumber(totalItems)} {totalItems === 1 ? "order" : "orders"} on these dates · page {page} of {totalPages}
+          </p>
+        </header>
+        <div>
+          <div className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-slate-100 [&_th]:text-xs [&_th]:text-slate-600">
+                <tr className="border-b border-slate-200">
                   <th className="p-3 text-left font-medium">#</th>
                   <th className="p-3 text-left font-medium">Date</th>
                   <th className="p-3 text-left font-medium">Customer</th>
@@ -577,17 +595,17 @@ function AnalyticsContent() {
                 )}
                 {!salesLoading &&
                   sales.map((s) => (
-                    <tr key={s._id} className="border-b last:border-b-0">
-                      <td className="p-3 font-medium">{s.saleNumber}</td>
+                    <tr key={s._id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60">
+                      <td className="p-3"><CodeBadge code={s.saleNumber} kind="sale" /></td>
                       <td className="p-3">
-                        {new Date(s.date).toLocaleDateString("en-IN")}
+                        <DateCell date={s.date} hint="none" />
                       </td>
-                      <td className="p-3">{s.customer?.name || "—"}</td>
-                      <td className="p-3 text-right">
-                        {formatINR(s.grandTotal)}
+                      <td className="p-3 text-slate-900">{s.customer?.name || "—"}</td>
+                      <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                        {formatINRSmart(s.grandTotal)}
                       </td>
-                      <td className="p-3 text-right">
-                        {formatINR(s.balanceAmount)}
+                      <td className="p-3 text-right tabular-nums whitespace-nowrap">
+                        {formatINRSmart(s.balanceAmount)}
                       </td>
                       <td className="p-3">
                         <Badge value={s.status} map={STATUS_BADGE} />
@@ -617,8 +635,8 @@ function AnalyticsContent() {
             />
           </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
         </TabsContent>
       </Tabs>
     </div>

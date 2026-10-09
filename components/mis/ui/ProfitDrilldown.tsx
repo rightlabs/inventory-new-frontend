@@ -20,6 +20,8 @@ export interface ProfitEntryLike {
   cost: number;
   returns: number;
   profit: number;
+  /** Return rows: cost of the goods that came back (positive). */
+  costBack?: number;
 }
 
 export interface ProfitTotalsLike {
@@ -137,7 +139,7 @@ export function ProfitEntryRow({ entry, className }: { entry: ProfitEntryLike; c
       <td className={cn(td, num)}>
         {isReturn ? (
           <span className="inline-flex items-center justify-end gap-1 text-[13px] text-slate-500">
-            Cost back {formatINRSmart(Math.abs(entry.cost))}
+            Cost back {formatINRSmart(entry.costBack ?? Math.abs(entry.cost))}
             <InfoTip term="costBack" side="left" />
           </span>
         ) : (

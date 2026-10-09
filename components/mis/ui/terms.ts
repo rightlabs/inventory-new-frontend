@@ -83,6 +83,24 @@ export const MIS_TERMS = {
     hi: "माल वापस आया, इसलिए उसकी लागत हटा दी गई।",
     en: "Goods came back, so their cost is removed.",
   },
+  purchases: {
+    title: "Purchases",
+    hiTitle: "ख़रीद",
+    hi: "इन तारीखों में वेंडर से जितना माल ख़रीदा, उसके बिलों की कुल रकम।",
+    en: "Total of the purchase orders from vendors in these dates.",
+  },
+  avgSale: {
+    title: "Avg. sale value",
+    hiTitle: "औसत बिल",
+    hi: "एक बिल औसतन कितने का बना। कुल बिक्री ÷ बिलों की गिनती।",
+    en: "The average bill: total sales divided by the number of bills.",
+  },
+  discount: {
+    title: "Discounts given",
+    hiTitle: "दी गई छूट",
+    hi: "इन तारीखों के बिलों में ग्राहकों को दी गई कुल छूट।",
+    en: "Total discount given to customers on the bills in these dates.",
+  },
 } as const satisfies Record<string, MisTerm>;
 
 export type MisTermKey = keyof typeof MIS_TERMS;
