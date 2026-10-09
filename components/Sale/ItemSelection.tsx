@@ -81,6 +81,15 @@ const costNote = (
   return `Last purchase ${b.purchaseNumber}: no freight`;
 };
 
+// Pieces box mandatory on a kg line when the item keeps a pieces count:
+// pipe/sheet, or a kg-sold fitting / polish with tracksPieces (server flag
+// from GET /items: counter > 0 or any movement carried pieces). Same rule as
+// Return Goods and POST /sale (Oct 2026).
+export const piecesRequired = (p?: InventoryItem) =>
+  !!p &&
+  p.unitType === "weight" &&
+  ((p as any).itemType === "PipeSheet" || (p as any).tracksPieces === true);
+
 export default function ItemSelection({
   item,
   index,
@@ -482,7 +491,7 @@ export default function ItemSelection({
             {selectedProduct.unitType === "weight" && (
               <div>
                 <label className="text-sm font-medium mb-1 block">
-                  {selectedProduct.itemType === "PipeSheet" ? "Pieces*" : "Pieces"}
+                  {piecesRequired(selectedProduct) ? "Pieces*" : "Pieces"}
                 </label>
                 <Input
                   type="text"
@@ -508,6 +517,20 @@ export default function ItemSelection({
                   onKeyDown={handleNumericKeyDown}
                   placeholder="Enter pieces"
                 />
+                {piecesRequired(selectedProduct) &&
+                  Number(item.weight) > 0 &&
+                  !(Number(item.pieces) > 0) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Enter the number of pieces
+                    </p>
+                  )}
+                {item.pieces !== "" &&
+                  item.pieces != null &&
+                  !Number.isInteger(Number(item.pieces)) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Pieces must be a whole number
+                    </p>
+                  )}
                 {Number(item.pieces) > ((selectedProduct as any).pieces ?? 0) && (
                   <p className="text-amber-600 text-xs mt-1">
                     Only {(selectedProduct as any).pieces ?? 0} pcs in stock — sale allowed,

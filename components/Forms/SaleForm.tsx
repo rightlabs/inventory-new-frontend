@@ -25,7 +25,7 @@ import { LedgerModal } from "./LedgerModal";
 import DatePicker from "@/components/ui/DatePicker";
 import SearchSelect, { SearchSelectOption } from "@/components/ui/SearchSelect";
 import BalanceAmount from "@/components/BalanceAmount";
-import ItemSelection from "../Sale/ItemSelection";
+import ItemSelection, { piecesRequired } from "../Sale/ItemSelection";
 import { Customer, InventoryItem, SaleItem } from "@/types/type";
 import { formatINR, formatQty, round2 } from "@/utils/format";
 import { Fact, FactStrip, PartyName, longDate } from "@/components/ModalParts";
@@ -330,16 +330,29 @@ export default function SalesForm({
       return;
     }
 
-    // Pieces are mandatory on pipe/sheet sales so the physical (countable) stock
-    // stays accurate — the client sells whole pieces only. Weight-sold fittings/
-    // polish keep it optional (deducted only when entered).
-    const missingPieces = selectedItems.filter(
+    // Pieces (whole number) are mandatory on a kg line whose item keeps a
+    // pieces count — pipe/sheet, or a kg-sold fitting / polish that tracks
+    // pieces — so the physical (countable) stock stays accurate. Kg items that
+    // never tracked pieces keep it optional. POST /sale checks the same rule.
+    const missingPieces = selectedItems.find((item) => {
+      const product = items.find((p) => p._id === item.itemId);
+      const required = product
+        ? piecesRequired(product)
+        : item.type === "pipe" || item.type === "sheet";
+      return required && !(Number(item.pieces) > 0);
+    });
+    if (missingPieces) {
+      toast.error(`Enter the number of pieces for ${missingPieces.name}`);
+      return;
+    }
+    const decimalPieces = selectedItems.find(
       (item) =>
-        (item.type === "pipe" || item.type === "sheet") &&
-        !(Number(item.pieces) > 0)
+        Number(item.weight) > 0 &&
+        String(item.pieces ?? "") !== "" &&
+        !Number.isInteger(Number(item.pieces))
     );
-    if (missingPieces.length > 0) {
-      toast.error("Please enter the number of pieces for each pipe / sheet item.");
+    if (decimalPieces) {
+      toast.error(`Pieces for ${decimalPieces.name} must be a whole number`);
       return;
     }
 
