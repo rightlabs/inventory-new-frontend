@@ -165,23 +165,47 @@ export interface ProfitFigures {
   margin: number | null;
 }
 
+export interface Pagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  limit: number;
+}
+
 export interface CustomerProfitRow extends ProfitFigures {
   customerId: string;
   name: string;
   code: string;
+  status?: string;
+  /** false = no bills or returns in the range (all figures are 0). */
+  hasActivity: boolean;
+  /** Position in the full list (activity by profit, then the rest by name). */
+  rank: number;
   bills: number;
   returnsCount: number;
 }
 
 export interface CustomerProfit {
   rows: CustomerProfitRow[];
-  totals: ProfitFigures & { customers: number; bills: number };
+  /** Whole range, whatever the search / page. */
+  totals: ProfitFigures & { customers: number; customersWithActivity: number; bills: number };
+  pagination: Pagination;
 }
 
-export const getCustomerProfit = async (startDate: string, endDate: string) => {
-  const res = await API_INSTANCE.get<{ data: CustomerProfit }>(
-    `/mis/customer-profit?startDate=${startDate}&endDate=${endDate}`
-  );
+/**
+ * Every customer, with the range's figures. Without page / limit the server
+ * sends every row; with them it pages (and searches) server-side.
+ */
+export const getCustomerProfit = async (
+  startDate: string,
+  endDate: string,
+  opts: { search?: string; page?: number; limit?: number } = {}
+) => {
+  const p = new URLSearchParams({ startDate, endDate });
+  if (opts.search?.trim()) p.append("search", opts.search.trim());
+  if (opts.page) p.append("page", String(opts.page));
+  if (opts.limit) p.append("limit", String(opts.limit));
+  const res = await API_INSTANCE.get<{ data: CustomerProfit }>(`/mis/customer-profit?${p}`);
   return res.data.data;
 };
 
@@ -191,21 +215,50 @@ export interface CustomerProfitEntry extends ProfitFigures {
   date: string;
   status?: string;
   grandTotal?: number;
+  /** Return rows: cost of the goods that came back (positive). */
+  costBack?: number;
+}
+
+export interface CustomerProfitSummary {
+  bills: number;
+  returnsCount: number;
+  sales: number;
+  returns: number;
+  netSales: number;
+  billsCost: number;
+  costBack: number;
+  cost: number;
+  profit: number;
+  margin: number | null;
+  firstBillDate: string | null;
+  lastBillDate: string | null;
 }
 
 export interface CustomerProfitDetail {
-  customer: { _id: string; name: string; code: string };
+  customer: { _id: string; name: string; code: string; status?: string };
+  range: { allTime: boolean; startDate: string | null; endDate: string | null };
+  summary: CustomerProfitSummary;
   entries: CustomerProfitEntry[];
   totals: ProfitFigures & { bills: number };
+  pagination: Pagination;
 }
 
+/** No dates = the customer's whole history. Entries are paged (100 a page). */
 export const getCustomerProfitDetail = async (
   customerId: string,
-  startDate: string,
-  endDate: string
+  range: { startDate?: string; endDate?: string } = {},
+  opts: { page?: number; limit?: number } = {}
 ) => {
+  const p = new URLSearchParams();
+  if (range.startDate && range.endDate) {
+    p.append("startDate", range.startDate);
+    p.append("endDate", range.endDate);
+  }
+  if (opts.page) p.append("page", String(opts.page));
+  if (opts.limit) p.append("limit", String(opts.limit));
+  const qs = p.toString();
   const res = await API_INSTANCE.get<{ data: CustomerProfitDetail }>(
-    `/mis/customer-profit/${customerId}?startDate=${startDate}&endDate=${endDate}`
+    `/mis/customer-profit/${customerId}${qs ? `?${qs}` : ""}`
   );
   return res.data.data;
 };

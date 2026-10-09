@@ -66,7 +66,16 @@ export function PartyTitle({ name, code, phone, className }: PartyTitleProps) {
 
 // ------------------------------------------------------------ summary chips
 /** "Bills 38 · Sales ₹8,30,193 · Returns … · Cost … · Profit … · Margin [10.6%]" */
-export function ProfitSummaryChips({ totals, className }: { totals: ProfitTotalsLike; className?: string }) {
+export function ProfitSummaryChips({
+  totals,
+  marginDecimals = 2,
+  className,
+}: {
+  totals: ProfitTotalsLike;
+  /** Same decimals as the margin elsewhere on the MIS page. */
+  marginDecimals?: number;
+  className?: string;
+}) {
   // 2-up grid on phones (tidy rows), one wrapping line from sm up.
   const chip =
     "flex items-baseline justify-between gap-1.5 whitespace-nowrap rounded-md bg-slate-50 px-2.5 py-1.5 ring-1 ring-inset ring-slate-200/70 sm:inline-flex sm:justify-start";
@@ -101,7 +110,7 @@ export function ProfitSummaryChips({ totals, className }: { totals: ProfitTotals
       <div className={cn(chip, "items-center")}>
         <dt className={label}>Margin</dt>
         <dd>
-          <MarginBadge margin={totals.margin} />
+          <MarginBadge margin={totals.margin} decimals={marginDecimals} />
         </dd>
       </div>
     </dl>

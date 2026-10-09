@@ -190,7 +190,7 @@ export default function CashBook({
           title="Money in"
           info="moneyIn"
           icon={ArrowDownLeft}
-          tone="in"
+          tone={t ? "in" : "neutral"}
           amount={t?.in.total}
           meta={t && plural(t.in.count, "payment", "payments")}
           sub="Received from customers"
@@ -203,7 +203,7 @@ export default function CashBook({
           title="Money out"
           info="moneyOut"
           icon={ArrowUpRight}
-          tone="out"
+          tone={t ? "out" : "neutral"}
           amount={t?.out.total}
           meta={t && plural(t.out.count, "payment", "payments")}
           sub="Vendors, transporters and refunds"
