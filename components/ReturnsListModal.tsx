@@ -18,6 +18,7 @@ import {
 } from "@/api/items";
 import { formatINR, formatQty } from "@/utils/format";
 import { formatLongDate } from "@/components/ui/DatePicker";
+import ListStatusRow from "@/components/ListStatusRow";
 
 const PAGE_SIZE = 20;
 
@@ -37,6 +38,8 @@ export default function ReturnsListModal({
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0); // Retry
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 400);
@@ -52,14 +55,19 @@ export default function ReturnsListModal({
     if (!open) return;
     let live = true;
     setLoading(true);
+    setLoadError(false);
     getInventoryReturns({ search: debounced, page, limit: PAGE_SIZE })
       .then((d) => live && setData(d))
-      .catch(() => live && setData(null))
+      .catch(() => {
+        if (!live) return;
+        setData(null); // no stale rows / page footer
+        setLoadError(true);
+      })
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
     };
-  }, [open, debounced, page]);
+  }, [open, debounced, page, reload]);
 
   const rows = data?.returns || [];
   const pg = data?.pagination;
@@ -107,24 +115,17 @@ export default function ReturnsListModal({
               </tr>
             </thead>
             <tbody>
-              {loading && !data && (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-muted-foreground">
-                    Loading...
-                  </td>
-                </tr>
+              {loading && <ListStatusRow status="loading" colSpan={5} search={debounced} />}
+              {!loading && loadError && (
+                <ListStatusRow status="error" colSpan={5} onRetry={() => setReload((n) => n + 1)} />
               )}
-              {data && rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-muted-foreground">
-                    {debounced ? `No returns match "${debounced}".` : "No returns yet."}
-                  </td>
-                </tr>
+              {!loading && data && rows.length === 0 && (
+                <ListStatusRow status="empty" colSpan={5} search={debounced} emptyText="No returns yet." />
               )}
-              {rows.map((r) => (
+              {!loading && rows.map((r) => (
                 <tr
                   key={r._id}
-                  className={`border-b last:border-b-0 align-top ${loading ? "opacity-60" : ""}`}
+                  className="border-b last:border-b-0 align-top"
                 >
                   <td className="p-2 font-medium whitespace-nowrap">
                     {r.returnNumber}
@@ -166,6 +167,7 @@ export default function ReturnsListModal({
             </tbody>
           </table>
         </div>
+        {!loading && !loadError && pg && pg.totalItems > 0 && (
         <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-muted-foreground" data-testid="returns-count">
             {pg && pg.totalItems > 0
@@ -182,6 +184,7 @@ export default function ReturnsListModal({
             disabled={loading}
           />
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

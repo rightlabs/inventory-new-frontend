@@ -26,6 +26,7 @@ import {
 import { formatINR } from "@/utils/format";
 import { downloadCsv, rowsToCsv } from "@/utils/csv";
 import { cn } from "@/lib/utils";
+import ListStatusRow from "@/components/ListStatusRow";
 
 const PAGE_SIZE = 25;
 
@@ -68,6 +69,8 @@ export default function CashBook({
   const [data, setData] = useState<CashBookData | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0); // Retry
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400);
@@ -82,6 +85,7 @@ export default function CashBook({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     getCashBook({
       startDate,
       endDate,
@@ -92,12 +96,16 @@ export default function CashBook({
       limit: PAGE_SIZE,
     })
       .then((d) => !cancelled && setData(d))
-      .catch(() => !cancelled && setData(null))
+      .catch(() => {
+        if (cancelled) return;
+        setData(null); // no stale rows / totals / page footer
+        setLoadError(true);
+      })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate, direction, mode, debounced, page]);
+  }, [startDate, endDate, direction, mode, debounced, page, reload]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -247,22 +255,20 @@ export default function CashBook({
             </tr>
           </thead>
           <tbody>
-            {loading && !data && (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                  Loading...
-                </td>
-              </tr>
+            {loading && <ListStatusRow status="loading" colSpan={6} search={debounced} />}
+            {!loading && loadError && (
+              <ListStatusRow status="error" colSpan={6} onRetry={() => setReload((n) => n + 1)} />
             )}
-            {data && data.rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                  No money in or out for these filters.
-                </td>
-              </tr>
+            {!loading && data && data.rows.length === 0 && (
+              <ListStatusRow
+                status="empty"
+                colSpan={6}
+                search={debounced}
+                emptyText="No money in or out for these filters."
+              />
             )}
-            {data?.rows.map((r) => (
-              <tr key={r._id} className={cn("border-b last:border-b-0", loading && "opacity-60")}>
+            {!loading && data?.rows.map((r) => (
+              <tr key={r._id} className="border-b last:border-b-0">
                 <td className="p-3 whitespace-nowrap">{formatLongDate(new Date(r.date))}</td>
                 <td className="p-3">
                   <span
@@ -311,8 +317,9 @@ export default function CashBook({
         </table>
       </div>
 
+      {!loading && !loadError && pg && pg.totalItems > 0 && (
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground" data-testid="list-footer">
           {pg && pg.totalItems > 0
             ? `Showing ${(pg.currentPage - 1) * PAGE_SIZE + 1}–${Math.min(
                 pg.currentPage * PAGE_SIZE,
@@ -327,6 +334,7 @@ export default function CashBook({
           disabled={loading}
         />
       </div>
+      )}
     </div>
   );
 }

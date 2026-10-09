@@ -22,6 +22,7 @@ import SaleForm from "@/components/Forms/SaleForm";
 import PaymentModal from "@/components/Forms/PaymentModal";
 import ReturnItemsModal from "@/components/Sale/ReturnItemsModal";
 import { formatINR } from "@/utils/format";
+import ListStatusRow from "@/components/ListStatusRow";
 
 export default function SalesPage() {
   const [open, setOpen] = useState(false);
@@ -35,6 +36,8 @@ export default function SalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const latestSalesRequest = useRef(0); // ignore out-of-order responses
+  const [loadError, setLoadError] = useState(false);
+  const lastSalesQuery = useRef({ page: 1, search: "" }); // for Retry
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -56,15 +59,21 @@ export default function SalesPage() {
   // Search runs on the server across ALL sales, then paginates.
   const fetchSales = async (page = 1, search = debouncedSearch) => {
     const requestId = ++latestSalesRequest.current;
+    lastSalesQuery.current = { page, search };
     try {
       setIsLoading(true);
+      setLoadError(false);
       const response = await getSales({ page, limit: 10, search });
       if (requestId !== latestSalesRequest.current) return;
-      if (response?.data?.statusCode === 200) {
-        setSales(response.data.data.sales);
-        setPagination(response.data.data.pagination);
-      }
+      if (response?.data?.statusCode !== 200) throw new Error("bad response");
+      // Rows and page footer always come from the same response.
+      setSales(response.data.data.sales);
+      setPagination(response.data.data.pagination);
     } catch (error) {
+      if (requestId !== latestSalesRequest.current) return;
+      setSales([]);
+      setPagination({ currentPage: 1, totalPages: 1, totalItems: 0 });
+      setLoadError(true);
       toast.error("Failed to fetch sales");
     } finally {
       if (requestId === latestSalesRequest.current) setIsLoading(false);
@@ -261,9 +270,7 @@ export default function SalesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-4">Loading sales...</div>
-          ) : (
+          {(
             <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full sticky-actions">
                 <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
@@ -295,7 +302,19 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map((sale) => (
+                  {isLoading && (
+                    <ListStatusRow status="loading" colSpan={8} search={debouncedSearch} />
+                  )}
+                  {!isLoading && loadError && (
+                    <ListStatusRow
+                      status="error"
+                      colSpan={8}
+                      onRetry={() =>
+                        fetchSales(lastSalesQuery.current.page, lastSalesQuery.current.search)
+                      }
+                    />
+                  )}
+                  {!isLoading && sales.map((sale) => (
                     <tr
                       key={sale._id}
                       className="border-b transition-colors hover:bg-muted/50"
@@ -365,15 +384,13 @@ export default function SalesPage() {
                       </td>
                     </tr>
                   ))}
-                  {sales.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-4 text-center text-muted-foreground"
-                      >
-                        {debouncedSearch ? `No sales match "${debouncedSearch}"` : "No sales found"}
-                      </td>
-                    </tr>
+                  {!isLoading && !loadError && sales.length === 0 && (
+                    <ListStatusRow
+                      status="empty"
+                      colSpan={8}
+                      search={debouncedSearch}
+                      emptyText="No sales found"
+                    />
                   )}
                 </tbody>
               </table>
@@ -381,9 +398,9 @@ export default function SalesPage() {
           )}
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
+          {!isLoading && !loadError && pagination.totalPages > 1 && (
             <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground" data-testid="list-footer">
                 Showing page {pagination.currentPage} of {pagination.totalPages} (
                 {pagination.totalItems} sales)
               </p>

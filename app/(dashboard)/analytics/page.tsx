@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import DataPagination from "@/components/DataPagination";
+import ListStatusRow from "@/components/ListStatusRow";
 import {
   Card,
   CardContent,
@@ -175,6 +176,8 @@ function AnalyticsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [salesLoading, setSalesLoading] = useState(false);
+  const [salesError, setSalesError] = useState(false);
+  const latestSalesRequest = useRef(0); // ignore out-of-order responses
 
   const [exporting, setExporting] = useState(false);
 
@@ -195,7 +198,9 @@ function AnalyticsContent() {
   };
 
   const fetchSales = async (targetPage = page) => {
+    const requestId = ++latestSalesRequest.current;
     setSalesLoading(true);
+    setSalesError(false);
     try {
       const res = await getSales({
         page: targetPage,
@@ -203,14 +208,20 @@ function AnalyticsContent() {
         startDate,
         endDate,
       });
+      if (requestId !== latestSalesRequest.current) return;
       const payload = res?.data?.data;
       setSales(payload?.sales || []);
       setTotalPages(payload?.pagination?.totalPages || 1);
       setTotalItems(payload?.pagination?.totalItems || 0);
     } catch (err: any) {
+      if (requestId !== latestSalesRequest.current) return;
+      setSales([]);
+      setTotalPages(1);
+      setTotalItems(0);
+      setSalesError(true);
       toast.error(err?.message || "Failed to load sales");
     } finally {
-      setSalesLoading(false);
+      if (requestId === latestSalesRequest.current) setSalesLoading(false);
     }
   };
 
@@ -557,19 +568,12 @@ function AnalyticsContent() {
                 </tr>
               </thead>
               <tbody>
-                {salesLoading && (
-                  <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                      Loading...
-                    </td>
-                  </tr>
+                {salesLoading && <ListStatusRow status="loading" colSpan={7} />}
+                {!salesLoading && salesError && (
+                  <ListStatusRow status="error" colSpan={7} onRetry={() => fetchSales(page)} />
                 )}
-                {!salesLoading && sales.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                      No sales in this range.
-                    </td>
-                  </tr>
+                {!salesLoading && !salesError && sales.length === 0 && (
+                  <ListStatusRow status="empty" colSpan={7} emptyText="No sales in this range." />
                 )}
                 {!salesLoading &&
                   sales.map((s) => (
@@ -598,8 +602,9 @@ function AnalyticsContent() {
           </div>
 
           {/* Pagination */}
+          {!salesLoading && !salesError && totalItems > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 mt-4 text-sm">
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground" data-testid="list-footer">
               Showing {(page - 1) * PAGE_SIZE + 1}–
               {Math.min(page * PAGE_SIZE, totalItems)} of{" "}
               {formatNumber(totalItems)}
@@ -611,6 +616,7 @@ function AnalyticsContent() {
               disabled={salesLoading}
             />
           </div>
+          )}
         </CardContent>
       </Card>
         </TabsContent>

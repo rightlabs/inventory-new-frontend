@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import PaymentModal from "@/components/Forms/PaymentModal";
 import DataPagination from "@/components/DataPagination";
 import { formatINR } from "@/utils/format";
+import ListStatusRow from "@/components/ListStatusRow";
 
 interface Vendor {
   id: string;
@@ -65,6 +66,8 @@ export default function PurchasePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const latestRequest = useRef(0); // ignore out-of-order responses
+  const [loadError, setLoadError] = useState(false);
+  const lastQuery = useRef({ page: 1, search: "" }); // for Retry
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
     null
   );
@@ -95,16 +98,21 @@ export default function PurchasePage() {
   // Search runs on the server across ALL purchases, then paginates.
   const fetchPurchases = async (page = 1, search = debouncedSearch) => {
     const requestId = ++latestRequest.current;
+    lastQuery.current = { page, search };
     try {
       setIsLoading(true);
+      setLoadError(false);
       const response = await getPurchases({ page, limit: 10, search });
       if (requestId !== latestRequest.current) return;
-
-      if (response?.data?.statusCode === 200) {
-        setPurchases(response.data.data.purchases);
-        setPagination(response.data.data.pagination);
-      }
+      if (response?.data?.statusCode !== 200) throw new Error("bad response");
+      // Rows and page footer always come from the same response.
+      setPurchases(response.data.data.purchases);
+      setPagination(response.data.data.pagination);
     } catch (error) {
+      if (requestId !== latestRequest.current) return;
+      setPurchases([]);
+      setPagination((p) => ({ ...p, currentPage: 1, totalPages: 1, totalItems: 0 }));
+      setLoadError(true);
       toast.error("Failed to fetch purchases");
       console.error("Error fetching purchases:", error);
     } finally {
@@ -259,19 +267,20 @@ export default function PurchasePage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={8} className="p-4 text-center">
-                      Loading...
-                    </td>
-                  </tr>
+                  <ListStatusRow status="loading" colSpan={8} search={debouncedSearch} />
+                ) : loadError ? (
+                  <ListStatusRow
+                    status="error"
+                    colSpan={8}
+                    onRetry={() => fetchPurchases(lastQuery.current.page, lastQuery.current.search)}
+                  />
                 ) : purchases.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-4 text-center">
-                      {debouncedSearch
-                        ? `No purchases match "${debouncedSearch}"`
-                        : "No purchases found"}
-                    </td>
-                  </tr>
+                  <ListStatusRow
+                    status="empty"
+                    colSpan={8}
+                    search={debouncedSearch}
+                    emptyText="No purchases found"
+                  />
                 ) : (
                   purchases.map((purchase) => (
                     <tr
@@ -327,9 +336,9 @@ export default function PurchasePage() {
           </div>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
+          {!isLoading && !loadError && pagination.totalPages > 1 && (
             <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground" data-testid="list-footer">
                 Showing page {pagination.currentPage} of {pagination.totalPages} (
                 {pagination.totalItems} purchases)
               </p>

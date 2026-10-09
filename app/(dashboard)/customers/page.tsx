@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import BalanceAmount from "@/components/BalanceAmount";
 import { LedgerModal } from "@/components/Forms/LedgerModal";
 import DataPagination from "@/components/DataPagination";
 import { formatINR } from "@/utils/format";
+import ListStatusRow from "@/components/ListStatusRow";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -66,22 +67,33 @@ export default function CustomersPage() {
     currentBalance: number;
   } | null>(null);
 
+  const latestRequest = useRef(0); // ignore out-of-order responses
+  const lastQuery = useRef({ page: 1, search: "" }); // for Retry
+  const [loadError, setLoadError] = useState(false);
+
   const fetchCustomers = async (page = 1, search = debouncedSearch) => {
+    const requestId = ++latestRequest.current;
+    lastQuery.current = { page, search };
     try {
       setIsLoading(true);
+      setLoadError(false);
       const customersResponse = await getCustomers({ page, limit: 10, search });
-
-      if (customersResponse?.data?.statusCode === 200) {
-        const data = customersResponse.data.data;
-        setCustomers(data.customers || []);
-        setPagination(
-          data.pagination || { currentPage: 1, totalPages: 1, totalItems: 0 }
-        );
-      }
+      if (requestId !== latestRequest.current) return;
+      if (customersResponse?.data?.statusCode !== 200) throw new Error("bad response");
+      // Rows and page footer always come from the same response.
+      const data = customersResponse.data.data;
+      setCustomers(data.customers || []);
+      setPagination(
+        data.pagination || { currentPage: 1, totalPages: 1, totalItems: 0 }
+      );
     } catch (error) {
+      if (requestId !== latestRequest.current) return;
+      setCustomers([]);
+      setPagination({ currentPage: 1, totalPages: 1, totalItems: 0 });
+      setLoadError(true);
       toast.error("Failed to fetch customers");
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequest.current) setIsLoading(false);
     }
   };
 
@@ -206,9 +218,7 @@ export default function CustomersPage() {
         </CardHeader>
 
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-4">Loading customers...</div>
-          ) : (
+          {(
             <>
             <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full sticky-actions">
@@ -241,15 +251,21 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-4 text-center text-muted-foreground"
-                      >
-                        No customers found
-                      </td>
-                    </tr>
+                  {isLoading ? (
+                    <ListStatusRow status="loading" colSpan={8} search={debouncedSearch} />
+                  ) : loadError ? (
+                    <ListStatusRow
+                      status="error"
+                      colSpan={8}
+                      onRetry={() => fetchCustomers(lastQuery.current.page, lastQuery.current.search)}
+                    />
+                  ) : customers.length === 0 ? (
+                    <ListStatusRow
+                      status="empty"
+                      colSpan={8}
+                      search={debouncedSearch}
+                      emptyText="No customers found"
+                    />
                   ) : (
                     customers.map((customer) => (
                     <tr
@@ -337,9 +353,9 @@ export default function CustomersPage() {
                 </tbody>
               </table>
             </div>
-            {pagination.totalPages > 1 && (
+            {!isLoading && !loadError && pagination.totalPages > 1 && (
               <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground" data-testid="list-footer">
                   Showing page {pagination.currentPage} of{" "}
                   {pagination.totalPages} ({pagination.totalItems} customers)
                 </p>

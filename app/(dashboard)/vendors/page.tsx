@@ -19,6 +19,7 @@ import {
 import { getVendorLedger } from "@/api/transaction";
 import { LedgerModal, TransactionData } from "@/components/Forms/LedgerModal";
 import { formatINR } from "@/utils/format";
+import ListStatusRow from "@/components/ListStatusRow";
 import RecordPaymentModal, {
   PaymentTarget,
 } from "@/components/Forms/RecordPaymentModal";
@@ -49,9 +50,13 @@ export default function VendorsPage() {
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
   const [paymentVendor, setPaymentVendor] = useState<PaymentTarget | null>(null);
 
+  const [loadError, setLoadError] = useState(false);
+
   const fetchVendors = async () => {
     try {
+      setLoadError(false);
       const response = await getVendors();
+      if (response?.data?.statusCode !== 200) throw new Error("bad response");
 
       if (response?.data?.statusCode === 200) {
         // Transform the data to match our interface
@@ -72,6 +77,8 @@ export default function VendorsPage() {
         setVendors(transformedVendors);
       }
     } catch (error) {
+      setVendors([]);
+      setLoadError(true);
       toast.error("Failed to fetch vendors");
       console.error("Error fetching vendors:", error);
     } finally {
@@ -198,15 +205,7 @@ export default function VendorsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <p>Loading vendors...</p>
-            </div>
-          ) : vendors.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-muted-foreground">No vendors found</p>
-            </div>
-          ) : (
+          {(
             <div className="rounded-md border overflow-auto max-h-[calc(100vh-260px)]">
               <table className="w-full sticky-actions">
                 <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-20 [&_th]:bg-muted">
@@ -241,7 +240,26 @@ export default function VendorsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVendors.map((vendor) => (
+                  {isLoading && <ListStatusRow status="loading" colSpan={9} />}
+                  {!isLoading && loadError && (
+                    <ListStatusRow
+                      status="error"
+                      colSpan={9}
+                      onRetry={() => {
+                        setIsLoading(true);
+                        fetchVendors();
+                      }}
+                    />
+                  )}
+                  {!isLoading && !loadError && filteredVendors.length === 0 && (
+                    <ListStatusRow
+                      status="empty"
+                      colSpan={9}
+                      search={searchQuery}
+                      emptyText="No vendors found"
+                    />
+                  )}
+                  {!isLoading && filteredVendors.map((vendor) => (
                     <tr
                       key={vendor.id}
                       className="border-b transition-colors hover:bg-muted/50"

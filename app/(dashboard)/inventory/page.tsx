@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { ListStatusBlock } from "@/components/ListStatusRow";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -110,6 +111,8 @@ export default function ItemsPage() {
   const isAdmin = user?.role === "admin";
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const latestItemsRequest = useRef(0); // ignore out-of-order responses
   const [open, setOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnsListOpen, setReturnsListOpen] = useState(false);
@@ -135,8 +138,10 @@ export default function ItemsPage() {
   }, [searchTerm]);
 
   const fetchItems = useCallback(async () => {
+    const requestId = ++latestItemsRequest.current;
     try {
       setLoading(true);
+      setLoadError(false);
       let filters: any = {
         searchTerm: debouncedSearchTerm,
       };
@@ -161,6 +166,8 @@ export default function ItemsPage() {
       }
 
       const response = await getItems(filters);
+      if (requestId !== latestItemsRequest.current) return;
+      if (!response?.data?.success) throw new Error("bad response");
 
       if (response?.data?.success) {
         const items = response.data.data.map((item: any) => ({
@@ -171,9 +178,12 @@ export default function ItemsPage() {
         setItems(items);
       }
     } catch (error) {
+      if (requestId !== latestItemsRequest.current) return;
+      setItems([]);
+      setLoadError(true);
       toast.error("Failed to fetch items");
     } finally {
-      setLoading(false);
+      if (requestId === latestItemsRequest.current) setLoading(false);
     }
   }, [selectedType, selectedSubCategory, selectedGrade, debouncedSearchTerm]);
 
@@ -229,7 +239,7 @@ export default function ItemsPage() {
 
   const getEmptyStateMessage = () => {
     if (searchTerm) {
-      return `No items found matching "${searchTerm}"`;
+      return `No results for “${searchTerm}”.`;
     }
     if (selectedSubCategory) {
       return `No items found in the "${selectedSubCategory.replace(
@@ -770,9 +780,9 @@ export default function ItemsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  Loading...
-                </div>
+                <ListStatusBlock status="loading" search={debouncedSearchTerm} />
+              ) : loadError ? (
+                <ListStatusBlock status="error" onRetry={fetchItems} />
               ) : (
                 <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPipeSheetTable(filteredItems as PipeSheetItem[])}
@@ -791,9 +801,9 @@ export default function ItemsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  Loading...
-                </div>
+                <ListStatusBlock status="loading" search={debouncedSearchTerm} />
+              ) : loadError ? (
+                <ListStatusBlock status="error" onRetry={fetchItems} />
               ) : (
                 <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPipeSheetTable(filteredItems as PipeSheetItem[])}
@@ -814,9 +824,9 @@ export default function ItemsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  Loading...
-                </div>
+                <ListStatusBlock status="loading" search={debouncedSearchTerm} />
+              ) : loadError ? (
+                <ListStatusBlock status="error" onRetry={fetchItems} />
               ) : (
                 <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderFittingTable(filteredItems as FittingItem[])}
@@ -837,9 +847,9 @@ export default function ItemsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  Loading...
-                </div>
+                <ListStatusBlock status="loading" search={debouncedSearchTerm} />
+              ) : loadError ? (
+                <ListStatusBlock status="error" onRetry={fetchItems} />
               ) : (
                 <div className="rounded-md border overflow-auto max-h-[calc(100vh-330px)]">
                   {renderPolishTable(

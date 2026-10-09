@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import DataPagination from "@/components/DataPagination";
+import ListStatusRow from "@/components/ListStatusRow";
 import { formatLongDate } from "@/components/ui/DatePicker";
 import {
   CustomerProfit as CustomerProfitData,
@@ -42,6 +43,8 @@ export default function CustomerProfit({
 }) {
   const [data, setData] = useState<CustomerProfitData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0); // Retry
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<CustomerProfitRow | null>(null);
@@ -51,14 +54,19 @@ export default function CustomerProfit({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     getCustomerProfit(startDate, endDate)
       .then((d) => !cancelled && setData(d))
-      .catch(() => !cancelled && setData(null))
+      .catch(() => {
+        if (cancelled) return;
+        setData(null); // no stale rows / page footer
+        setLoadError(true);
+      })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, reload]);
 
   useEffect(() => setPage(1), [search, startDate, endDate]);
 
@@ -201,27 +209,24 @@ export default function CustomerProfit({
             </tr>
           </thead>
           <tbody>
-            {loading && !data && (
-              <tr>
-                <td colSpan={9} className="p-6 text-center text-muted-foreground">
-                  Loading...
-                </td>
-              </tr>
+            {loading && <ListStatusRow status="loading" colSpan={9} search={search} />}
+            {!loading && loadError && (
+              <ListStatusRow status="error" colSpan={9} onRetry={() => setReload((n) => n + 1)} />
             )}
-            {data && filtered.length === 0 && (
-              <tr>
-                <td colSpan={9} className="p-6 text-center text-muted-foreground">
-                  {search ? `No customer matches "${search}"` : "No customer sales in this date range."}
-                </td>
-              </tr>
+            {!loading && data && filtered.length === 0 && (
+              <ListStatusRow
+                status="empty"
+                colSpan={9}
+                search={search}
+                emptyText="No customer sales in this date range."
+              />
             )}
-            {pageRows.map((r) => (
+            {!loading && pageRows.map((r) => (
               <tr
                 key={r.customerId}
                 onClick={() => openDetail(r)}
                 className={cn(
-                  "border-b last:border-b-0 cursor-pointer hover:bg-slate-50",
-                  loading && "opacity-60"
+                  "border-b last:border-b-0 cursor-pointer hover:bg-slate-50"
                 )}
                 data-testid="cp-row"
               >
@@ -251,14 +256,16 @@ export default function CustomerProfit({
         </table>
       </div>
 
+      {!loading && !loadError && filtered.length > 0 && (
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground" data-testid="list-footer">
           {filtered.length > 0
             ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length} customer(s)`
             : ""}
         </span>
         <DataPagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
+      )}
 
       {/* Drill-down: the customer's bills and returns in the range */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
